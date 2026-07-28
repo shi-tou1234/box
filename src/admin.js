@@ -1,21 +1,28 @@
-import {
+﻿import {
   STORAGE_KEY,
   SETTINGS_KEY,
+  AUTH_KEY,
   storageRead,
   storageWrite,
   settingsRead,
   settingsWrite,
+  authReadPassword,
+  authWritePassword,
+  authClear,
+  authIsLoggedIn,
+  authLogin,
+  authLogout,
   coerceQuantity,
   generateId,
   nowIso,
   escapeHtml,
+  summarizeChanges,
   getSortedItems,
   parseImportedText,
-  summarizeChanges,
   getCategoryOptions,
   getPackageSuggestions,
   resolveCategoryKey,
-} from './shared.js';
+} from '../src/shared.js';
 
 const state = {
   items: [],
@@ -94,40 +101,38 @@ function renderPackageDatalist(category = '') {
   const datalist = $('#packageOptions');
   if (!datalist) return;
   const suggestions = getPackageSuggestions(category);
-  const used = state.items.filter((item) => resolveCategoryKey(item.category) === resolveCategoryKey(category)).map((item) => (item.package || '').trim()).filter(Boolean);
-  const options = Array.from(new Set(suggestions.concat(used))).sort((a, b) => a.localeCompare(b, 'zh'));
+  const options = Array.from(new Set(suggestions.concat(getUniqueValues('package')))).sort((a, b) => a.localeCompare(b, 'zh'));
   datalist.innerHTML = options.map((option) => `<option value="${escapeHtml(option)}"></option>`).join('');
 }
 
-function renderList() {
-  const filtered = getFilteredItems();
-  const listEl = $('#componentList');
-  const emptyEl = $('#listEmpty');
+function renderAdminList() {
+  const listEl = $('#adminComponentList');
+  const emptyEl = $('#adminListEmpty');
+  const items = getFilteredItems();
 
-  $('#listSummary').textContent = `共 ${filtered.length} 项 / 全部 ${state.items.length} 项`;
+  $('#adminListSummary').textContent = `共 ${items.length} 项 / 全部 ${state.items.length} 项`;
 
-  if (!filtered.length) {
+  if (!items.length) {
     listEl.innerHTML = '';
     emptyEl.hidden = false;
     return;
   }
 
   emptyEl.hidden = true;
-  listEl.innerHTML = filtered
+  listEl.innerHTML = items
     .map((item) => {
-      const statusClass = item.quantity <= 0 ? 'is-out' : item.quantity <= 5 ? 'is-low' : '';
       const activeClass = item.id === state.selectedId ? 'is-active' : '';
       return `
-        <div class="list__item ${activeClass} ${statusClass}" data-id="${escapeHtml(item.id)}">
-          <div class="list__primary">
-            <div class="list__name">${escapeHtml(item.name || '未命名')}</div>
-            <div class="list__meta">${escapeHtml([item.category, item.model, item.package].filter(Boolean).join('  · ') || '暂无完整信息')}</div>
-          </div>
-          <div class="list__badges">
+        <button type="button" class="list__item ${activeClass}" data-id="${escapeHtml(item.id)}">
+          <span class="list__primary">
+            <span class="list__name">${escapeHtml(item.name || '未命名')}</span>
+            <span class="list__meta">${escapeHtml([item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息')}</span>
+          </span>
+          <span class="list__badges">
             <span class="badge badge--accent">${escapeHtml(item.category || '未分类')}</span>
             <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--muted'}">${coerceQuantity(item.quantity)}</span>
-          </div>
-        </div>
+          </span>
+        </button>
       `;
     })
     .join('');
@@ -135,6 +140,83 @@ function renderList() {
   $$('.list__item').forEach((node) => {
     node.addEventListener('click', () => selectItem(node.dataset.id));
   });
+}
+
+function renderInventory() {
+  const tbody = $('#inventoryBody');
+  const emptyEl = $('#inventoryEmpty');
+  if (!tbody) return;
+  const threshold = Number($('#lowStockThreshold')?.value ?? settingsRead().lowStockThreshold);
+  const items = getSortedItems(state.items, 'name', 'asc');
+
+  if (!items.length) {
+    tbody.innerHTML = '';
+    emptyEl?.classList.remove('hidden');
+    return;
+  }
+
+  emptyEl?.classList.add('hidden');
+  tbody.innerHTML = items
+    .map((item) => {
+      const quantity = coerceQuantity(item.quantity);
+      const isLow = quantity <= threshold;
+      const statusText = quantity <= 0 ? '缺货' : isLow ? '低库存' : '正常';
+      const statusClass = quantity <= 0 ? 'text-danger' : isLow ? 'text-danger' : 'text-muted';
+      return `
+        <tr>
+          <td><input type="checkbox" class="inventory-check" value="${escapeHtml(item.id)}" /></td>
+          <td>${escapeHtml(item.name || '-')}</td>
+          <td>${escapeHtml(item.category || '-')}</td>
+          <td>${escapeHtml(item.model || '-')}</td>
+          <td>${escapeHtml(item.package || '-')}</td>
+          <td>${quantity}</td>
+          <td>${escapeHtml(item.location || '-')}</td>
+          <td class="${statusClass}">${statusText}</td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function getSelectedInventoryIds() {
+  return Array.from($$('.inventory-check:checked')).map((node) => node.value);
+}
+
+function updateSyncStatus() {
+  const current = settingsRead();
+  const text = $('#syncStatusText');
+  if (!text) return;
+  text.textContent = current.gistUrl ? `已配置 Gist：${current.gistUrl}` : '未配置 Gist 地址';
+}
+
+function showAdminPanel(panelId) {
+  const buttons = $$('#adminSidebar .admin-tab-btn');
+  const panels = $$('.admin-panel');
+  buttons.forEach((btn) => {
+    const selected = btn.getAttribute('data-tab') === panelId;
+    btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+  });
+  panels.forEach((panel) => {
+    const panelIdAttr = panel.getAttribute('data-panel');
+    if (panelIdAttr === panelId) {
+      panel.classList.remove('hidden');
+    } else {
+      panel.classList.add('hidden');
+    }
+  });
+  if (panelId === 'inventory') {
+    renderInventory();
+  }
+  if (panelId === 'sync') {
+    updateSyncStatus();
+  }
+  if (panelId === 'settings') {
+    const current = settingsRead();
+    $('#adminGithubToken').value = current.token;
+    $('#adminGistUrl').value = current.gistUrl;
+    $('#adminPassword').value = authReadPassword();
+    $('#lowStockThreshold').value = current.lowStockThreshold;
+  }
 }
 
 function renderDetail() {
@@ -149,7 +231,7 @@ function renderDetail() {
     detailEl.innerHTML = `
       <div class="empty">
         <div class="empty__title">未选择条目</div>
-        <div class="empty__desc">点击列表中的元器件可查看详情。</div>
+        <div class="empty__desc">从列表选择一个元器件，即可查看详情与快速操作。</div>
       </div>
     `;
     return;
@@ -227,7 +309,7 @@ function renderDetail() {
 
 function selectItem(id) {
   state.selectedId = id;
-  renderList();
+  renderAdminList();
   renderDetail();
 }
 
@@ -245,8 +327,9 @@ function upsertItem(payload) {
   state.items.push(next);
   storageWrite(state.items);
   refreshFilters();
-  renderList();
   renderCategoryDatalist();
+  renderPackageDatalist(next.category);
+  renderAdminList();
   if (state.selectedId === next.id) {
     renderDetail();
   }
@@ -262,7 +345,7 @@ function deleteItem(id) {
   }
   storageWrite(state.items);
   refreshFilters();
-  renderList();
+  renderAdminList();
   renderDetail();
   showToast('已删除');
 }
@@ -384,37 +467,49 @@ function submitQuantity(event) {
   item.updatedAt = nowIso();
   storageWrite(state.items);
   refreshFilters();
-  renderList();
+  renderAdminList();
   renderDetail();
+  renderInventory();
   closeQuantityDialog();
   showToast('数量已更新');
 }
 
-function openSettings() {
-  const current = settingsRead();
-  $('#githubToken').value = current.token;
-  $('#gistUrl').value = current.gistUrl;
-  $('#settingsDialog').showModal();
+function exportJson() {
+  const blob = new Blob([JSON.stringify(state.items, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'solder-components.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast('已导出 JSON');
 }
 
-function updateSyncStatus() {
-  const current = settingsRead();
-  const text = $('#syncStatusText');
-  if (!text) return;
-  text.textContent = current.gistUrl ? `已配置 Gist：${current.gistUrl}` : '未配置 Gist 地址。';
-}
-
-function closeSettings() {
-  $('#settingsDialog').close();
-}
-
-function submitSettings(event) {
-  event.preventDefault();
-  const token = $('#githubToken').value.trim();
-  const gistUrl = $('#gistUrl').value.trim();
-  settingsWrite({ ...settingsRead(), token, gistUrl });
-  closeSettings();
-  showToast('设置已保存');
+function importJson(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const remoteItems = parseImportedText(reader.result);
+      const summary = summarizeChanges(state.items, remoteItems);
+      if (!confirm(`将导入 ${summary.totalTarget} 条记录，其中新增 ${summary.added} 条、删除 ${summary.removed} 条，是否继续？`)) {
+        showToast('已取消导入');
+        return;
+      }
+      state.items = remoteItems;
+      storageWrite(state.items);
+      refreshFilters();
+      renderAdminList();
+      renderDetail();
+      renderInventory();
+      showToast('导入成功');
+    } catch (error) {
+      console.error(error);
+      showToast(error.message || '导入失败');
+    }
+  };
+  reader.readAsText(file);
 }
 
 function normalizeGistUrl(url) {
@@ -488,7 +583,7 @@ async function syncFromGist() {
     const gistUrl = normalizeGistUrl(currentSettings.gistUrl || '');
 
     if (!gistUrl) {
-      showToast('请先在设置中填写 Gist 地址', { duration: 2400 });
+      showToast('请先在设置中配置 Gist 地址', { duration: 2400 });
       return;
     }
 
@@ -497,7 +592,7 @@ async function syncFromGist() {
     const remoteItems = await readGistContent(gist);
     const summary = summarizeChanges(state.items, remoteItems);
 
-    if (!confirm(`将从 Gist 恢复 ${summary.totalTarget} 条记录，其中新增 ${summary.added} 条、移除 ${summary.removed} 条，是否继续？`)) {
+    if (!confirm(`将从 Gist 恢复 ${summary.totalTarget} 条记录，其中新增 ${summary.added} 条、删除 ${summary.removed} 条，是否继续？`)) {
       showToast('已取消恢复');
       return;
     }
@@ -505,8 +600,9 @@ async function syncFromGist() {
     state.items = remoteItems;
     storageWrite(state.items);
     refreshFilters();
-    renderList();
-    selectItem(state.selectedId);
+    renderAdminList();
+    renderDetail();
+    renderInventory();
     showToast('已从 Gist 恢复');
   } catch (error) {
     console.error(error);
@@ -539,7 +635,7 @@ async function syncToGist() {
       try {
         gist = await githubRequest(`/gists/${gistId}`);
       } catch (error) {
-        console.warn('读取已有 Gist 失败，将尝试创建新的', error);
+        console.warn('读取已有 Gist 失败，将创建新的', error);
         gistId = '';
       }
     }
@@ -569,103 +665,69 @@ async function syncToGist() {
 }
 
 function setSyncLoading(loading) {
-  const syncBtn = $('#syncBtn');
+  const syncBtn = $('#adminSyncToBtn');
   syncBtn.disabled = loading;
-  syncBtn.textContent = loading ? '同步中...' : '同步';
+  syncBtn.textContent = loading ? '同步中...' : '上传到 Gist';
+
+  const restoreBtn = $('#adminSyncFromBtn');
+  restoreBtn.disabled = loading;
+  restoreBtn.textContent = loading ? '恢复中...' : '从 Gist 恢复';
 }
 
-function exportJson() {
-  const blob = new Blob([JSON.stringify(state.items, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'solder-components.json';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  showToast('已导出 JSON');
-}
+function initAdminLayout() {
+  const sidebar = $('#adminSidebar');
+  const logoutBtn = $('#adminLogoutBtn');
+  const isLoggedIn = authIsLoggedIn();
 
-function importJson(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const remoteItems = parseImportedText(reader.result);
-      const summary = summarizeChanges(state.items, remoteItems);
-      if (!confirm(`将导入 ${summary.totalTarget} 条记录，其中新增 ${summary.added} 条、移除 ${summary.removed} 条，是否继续？`)) {
-        showToast('已取消导入');
-        return;
-      }
-      state.items = remoteItems;
-      storageWrite(state.items);
-      refreshFilters();
-      renderList();
-      selectItem(state.selectedId);
-      showToast('导入成功');
-    } catch (error) {
-      console.error(error);
-      showToast(error.message || '导入失败');
-    }
-  };
-  reader.readAsText(file);
+  function applyAdminPanelVisibility() {
+    sidebar?.classList.remove('hidden');
+    logoutBtn?.classList.remove('hidden');
+    document.getElementById('adminLoginPanel')?.classList.add('hidden');
+  }
+
+  function applyLoginVisibility() {
+    sidebar?.classList.add('hidden');
+    logoutBtn?.classList.add('hidden');
+    document.getElementById('adminLoginPanel')?.classList.remove('hidden');
+  }
+
+  if (isLoggedIn) {
+    applyAdminPanelVisibility();
+  }
+
+  const tabBtns = sidebar?.querySelectorAll('.admin-tab-btn');
+  tabBtns?.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.getAttribute('data-tab');
+      if (!tabId) return;
+      applyAdminPanelVisibility();
+      showAdminPanel(tabId);
+    });
+  });
+
+  logoutBtn?.addEventListener('click', () => {
+    authLogout();
+    applyLoginVisibility();
+    showToast('已退出管理后台');
+  });
 }
 
 function init() {
   state.items = storageRead();
   refreshFilters();
   renderCategoryDatalist();
-  renderList();
+  renderAdminList();
   renderDetail();
   updateSyncStatus();
 
-  $('#newBtn').addEventListener('click', () => openForm());
-  $('#queryNewBtn').addEventListener('click', () => openForm());
-  $('#settingsBtn').addEventListener('click', openSettings);
-  $('#syncBtn').addEventListener('click', syncToGist);
-  $('#exportBtn').addEventListener('click', exportJson);
-  $('#importBtn').addEventListener('click', () => $('#importFile').click());
-  $('#importFile').addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (file) importJson(file);
-    event.target.value = '';
-  });
-
-  $('#search').addEventListener('input', (event) => {
-    state.filterText = event.target.value;
-    renderList();
-  });
-  $('#filterCategory').addEventListener('change', (event) => {
-    state.filterCategory = event.target.value;
-    renderList();
-    renderPackageDatalist(state.filterCategory);
-  });
-  $('#filterPackage').addEventListener('change', (event) => {
-    state.filterPackage = event.target.value;
-    renderList();
-  });
-  $('#filterStock').addEventListener('change', (event) => {
-    state.filterStock = event.target.value;
-    renderList();
-  });
-  $('#filterCategory').addEventListener('input', () => {
-    renderPackageDatalist($('#filterCategory').value);
-  });
-
-  $('#saveBtn').addEventListener('click', () => {
-    const item = state.items.find((entry) => entry.id === state.selectedId);
-    openForm(item || null);
-  });
-  $('#deleteBtn').addEventListener('click', () => {
-    if (state.selectedId) deleteItem(state.selectedId);
-  });
+  $('#adminNewBtn').addEventListener('click', () => openForm());
+  $('#closeFormBtn').addEventListener('click', closeForm);
+  $('#cancelFormBtn').addEventListener('click', closeForm);
+  $('#componentForm').addEventListener('submit', submitForm);
 
   $('#formDialog').addEventListener('click', (event) => {
     if (event.target === $('#formDialog')) closeForm();
   });
-  $('#closeFormBtn').addEventListener('click', closeForm);
-  $('#cancelFormBtn').addEventListener('click', closeForm);
-  $('#componentForm').addEventListener('submit', submitForm);
 
   $('#quantityDialog').addEventListener('click', (event) => {
     if (event.target === $('#quantityDialog')) closeQuantityDialog();
@@ -674,14 +736,98 @@ function init() {
   $('#cancelQuantityBtn').addEventListener('click', closeQuantityDialog);
   $('#quantityForm').addEventListener('submit', submitQuantity);
 
-  $('#settingsDialog').addEventListener('click', (event) => {
-    if (event.target === $('#settingsDialog')) closeSettings();
+  $('#adminLoginForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const password = $('#adminLoginPassword').value || '';
+    if (authLogin(password)) {
+      $('#adminLoginPanel').classList.add('hidden');
+      showAdminPanel('components');
+      showToast('已进入管理后台');
+    } else {
+      showToast('密码错误', { duration: 2400 });
+    }
   });
-  $('#closeSettingsBtn').addEventListener('click', closeSettings);
-  $('#cancelSettingsBtn').addEventListener('click', closeSettings);
-  $('#settingsForm').addEventListener('submit', submitSettings);
 
-  updateSyncStatus();
+  $('#adminSettingsForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const token = $('#adminGithubToken').value.trim();
+    const gistUrl = $('#adminGistUrl').value.trim();
+    const password = $('#adminPassword').value || '';
+    const lowStockThreshold = Number($('#lowStockThreshold').value);
+    const current = settingsRead();
+    settingsWrite({ ...current, token, gistUrl, lowStockThreshold: Number.isFinite(lowStockThreshold) ? Math.max(0, lowStockThreshold) : 5 });
+    if (password) authWritePassword(password);
+    showToast('设置已保存');
+    showAdminPanel('settings');
+  });
+
+  $('#adminSettingsResetBtn').addEventListener('click', () => {
+    $('#adminGithubToken').value = '';
+    $('#adminGistUrl').value = '';
+    $('#adminPassword').value = '';
+    $('#lowStockThreshold').value = '5';
+  });
+
+  $('#inventoryCheckAll').addEventListener('change', (event) => {
+    const checked = event.target.checked;
+    $$('.inventory-check').forEach((node) => (node.checked = checked));
+  });
+
+  $('#batchDeleteBtn').addEventListener('click', () => {
+    const ids = getSelectedInventoryIds();
+    if (!ids.length) {
+      showToast('请先选择要删除的条目', { duration: 2400 });
+      return;
+    }
+    if (!confirm(`将删除 ${ids.length} 条库存记录，是否继续？`)) {
+      return;
+    }
+    state.items = state.items.filter((item) => !ids.includes(item.id));
+    storageWrite(state.items);
+    refreshFilters();
+    renderAdminList();
+    renderDetail();
+    renderInventory();
+    showToast('已批量删除');
+  });
+
+  $('#batchClearBtn').addEventListener('click', () => {
+    const ids = getSelectedInventoryIds();
+    if (!ids.length) {
+      showToast('请先选择要清空的条目', { duration: 2400 });
+      return;
+    }
+    if (!confirm(`将清零 ${ids.length} 条库存记录的数量，是否继续？`)) {
+      return;
+    }
+    state.items.forEach((item) => {
+      if (ids.includes(item.id)) {
+        item.quantity = 0;
+        item.updatedAt = nowIso();
+      }
+    });
+    storageWrite(state.items);
+    refreshFilters();
+    renderAdminList();
+    renderDetail();
+    renderInventory();
+    showToast('已批量清空');
+  });
+
+  $('#adminExportBtn').addEventListener('click', exportJson);
+  $('#adminImportBtn').addEventListener('click', () => $('#adminImportFile').click());
+  $('#adminImportFile').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) importJson(file);
+    event.target.value = '';
+  });
+  $('#adminSyncToBtn').addEventListener('click', syncToGist);
+  $('#adminSyncFromBtn').addEventListener('click', syncFromGist);
+
+  initAdminLayout();
+  if (authIsLoggedIn()) {
+    showAdminPanel('components');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
