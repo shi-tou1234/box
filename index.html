@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>焊接元器件查询管理器</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="app-header__brand">
+        <div class="app-header__title">焊接元器件查询管理器</div>
+        <div class="app-header__subtitle">本地优先 · GitHub Pages · 静态站点</div>
+      </div>
+      <div class="app-header__actions">
+        <button class="button button--primary" id="newBtn" title="新增元器件">新增</button>
+        <button class="button button--ghost" id="syncBtn" title="GitHub Gist 同步">同步</button>
+        <button class="button button--ghost" id="importBtn" title="导入 JSON">导入</button>
+        <button class="button button--ghost" id="exportBtn" title="导出 JSON">导出</button>
+        <button class="button button--ghost" id="settingsBtn" title="设置">设置</button>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <div class="field">
+        <label class="field__label" for="search">搜索</label>
+        <input class="input" id="search" placeholder="按名称或型号搜索" />
+      </div>
+      <div class="field">
+        <label class="field__label" for="filterCategory">种类</label>
+        <select class="select" id="filterCategory"><option value="">全部</option></select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="filterPackage">封装</label>
+        <select class="select" id="filterPackage"><option value="">全部</option></select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="filterStock">库存</label>
+        <select class="select" id="filterStock">
+          <option value="all">全部</option>
+          <option value="in">有货</option>
+          <option value="out">缺货</option>
+        </select>
+      </div>
+      <div class="toolbar__summary" id="listSummary">共 0 项</div>
+    </section>
+
+    <main class="main">
+      <section class="panel panel--list">
+        <div class="panel__header">
+          <div class="panel__title">元器件列表</div>
+        </div>
+        <div class="list" id="componentList"></div>
+        <div class="empty" id="listEmpty">
+          <div class="empty__title">暂无元器件</div>
+          <div class="empty__desc">点击“新增”添加第一条记录，或导入 JSON 数据。</div>
+        </div>
+      </section>
+
+      <section class="panel panel--detail">
+        <div class="panel__header">
+          <div class="panel__title" id="detailTitle">选择一个元器件查看详情</div>
+          <div class="panel__actions" id="detailActions" hidden>
+            <button class="button button--danger button--small" id="deleteBtn">删除</button>
+            <button class="button button--primary button--small" id="saveBtn">保存</button>
+          </div>
+        </div>
+        <div class="detail" id="detail">
+          <div class="empty">
+            <div class="empty__title">未选择条目</div>
+            <div class="empty__desc">点击列表中的元器件可编辑详情。</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="dialog" id="formDialog" aria-modal="true" aria-labelledby="formDialogTitle">
+    <div class="dialog__body">
+      <div class="dialog__header">
+        <div class="dialog__title" id="formDialogTitle">新增元器件</div>
+        <button class="button button--ghost button--icon" id="closeFormBtn" aria-label="关闭">✕</button>
+      </div>
+      <form class="form" id="componentForm" autocomplete="off">
+        <input type="hidden" id="formId" />
+        <div class="form__grid">
+          <div class="field">
+            <label class="field__label" for="formName">名称 <span class="required">*</span></label>
+            <input class="input" id="formName" required />
+          </div>
+          <div class="field">
+            <label class="field__label" for="formCategory">种类 <span class="required">*</span></label>
+            <input class="input" id="formCategory" required placeholder="电阻、电容、MCU..." />
+          </div>
+          <div class="field">
+            <label class="field__label" for="formModel">型号</label>
+            <input class="input" id="formModel" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="formPackage">封装</label>
+            <input class="input" id="formPackage" placeholder="0805、SOT-23..." />
+          </div>
+          <div class="field">
+            <label class="field__label" for="formQuantity">数量</label>
+            <input class="input" id="formQuantity" type="number" inputmode="numeric" min="0" step="1" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="formLocation">位置/库位</label>
+            <input class="input" id="formLocation" />
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="formDatasheet">数据手册链接</label>
+            <input class="input" id="formDatasheet" placeholder="https://..." />
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="formNotes">备注</label>
+            <textarea class="textarea" id="formNotes" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="dialog__footer">
+          <button type="button" class="button button--ghost" id="cancelFormBtn">取消</button>
+          <button type="submit" class="button button--primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="dialog" id="quantityDialog" aria-modal="true" aria-labelledby="quantityDialogTitle">
+    <div class="dialog__body">
+      <div class="dialog__header">
+        <div class="dialog__title" id="quantityDialogTitle">调整数量</div>
+        <button class="button button--ghost button--icon" id="closeQuantityBtn" aria-label="关闭">✕</button>
+      </div>
+      <form class="form" id="quantityForm" autocomplete="off">
+        <input type="hidden" id="quantityId" />
+        <div class="form__grid">
+          <div class="field">
+            <label class="field__label" for="quantityMode">模式</label>
+            <select class="select" id="quantityMode">
+              <option value="increase">增加</option>
+              <option value="decrease">减少</option>
+              <option value="set">设为</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="quantityValue">数量 <span class="required">*</span></label>
+            <input class="input" id="quantityValue" type="number" inputmode="numeric" min="0" step="1" required />
++          </div>
+        </div>
+        <div class="dialog__footer">
+          <button type="button" class="button button--ghost" id="cancelQuantityBtn">取消</button>
+          <button type="submit" class="button button--primary">应用</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="dialog" id="settingsDialog" aria-modal="true" aria-labelledby="settingsDialogTitle">
+    <div class="dialog__body">
+      <div class="dialog__header">
+        <div class="dialog__title" id="settingsDialogTitle">设置</div>
+        <button class="button button--ghost button--icon" id="closeSettingsBtn" aria-label="关闭">✕</button>
+      </div>
+      <form class="form" id="settingsForm" autocomplete="off">
+        <div class="form__grid">
+          <div class="field field--full">
+            <label class="field__label" for="githubToken">GitHub Personal Access Token（gist 权限）</label>
+            <input class="input" id="githubToken" placeholder="ghp_..." />
+            <div class="field__hint">建议使用 classic token，仅授予 gist 权限；不会上传到任何第三方服务。</div>
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="gistUrl">现有 Gist 地址</label>
+            <input class="input" id="gistUrl" placeholder="https://gist.github.com/..." />
+            <div class="field__hint">留空会在同步时自动创建新的私有 Gist。</div>
+          </div>
+        </div>
+        <div class="dialog__footer">
+          <button type="button" class="button button--ghost" id="cancelSettingsBtn">取消</button>
+          <button type="submit" class="button button--primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <input type="file" id="importFile" accept="application/json" hidden />
+
+  <script src="app.js"></script>
+</body>
+</html>
