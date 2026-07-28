@@ -12,6 +12,9 @@ import {
   getSortedItems,
   parseImportedText,
   summarizeChanges,
+  getCategoryOptions,
+  getPackageSuggestions,
+  resolveCategoryKey,
 } from './shared.js';
 
 const state = {
@@ -394,6 +397,13 @@ function openSettings() {
   $('#settingsDialog').showModal();
 }
 
+function updateSyncStatus() {
+  const current = settingsRead();
+  const text = $('#syncStatusText');
+  if (!text) return;
+  text.textContent = current.gistUrl ? `已配置 Gist：${current.gistUrl}` : '未配置 Gist 地址。';
+}
+
 function closeSettings() {
   $('#settingsDialog').close();
 }
@@ -671,7 +681,7 @@ function init() {
   $('#cancelSettingsBtn').addEventListener('click', closeSettings);
   $('#settingsForm').addEventListener('submit', submitSettings);
 
-  showView('query');
+  updateSyncStatus();
 }
 
 document.addEventListener('DOMContentLoaded', init);

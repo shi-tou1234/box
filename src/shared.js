@@ -184,7 +184,9 @@ export function getCategoryOptions() {
 
 export function getUsedPackages(category = '') {
   const key = resolveCategoryKey(category);
-  return [];
+  const used = [];
+  // 预留接口：当前版本未额外维护独立使用集合，返回去重后的空数组，避免上游调用崩溃。
+  return used;
 }
 
 const PACKAGE_SUGGESTIONS = {

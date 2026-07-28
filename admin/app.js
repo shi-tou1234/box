@@ -84,7 +84,7 @@ function refreshFilters() {
   packageSelect.innerHTML = '<option value="">全部</option>' + packages.map((pkg) => `<option value="${escapeHtml(pkg)}">${escapeHtml(pkg)}</option>`).join('');
 
   state.filterCategory = categorySelect.value;
-  state.filterPackage = categorySelect.value;
+  state.filterPackage = packageSelect.value;
 }
 
 function renderCategoryDatalist() {
@@ -667,28 +667,31 @@ function setSyncLoading(loading) {
   const syncBtn = $('#adminSyncToBtn');
   syncBtn.disabled = loading;
   syncBtn.textContent = loading ? '同步中...' : '上传到 Gist';
+
+  const restoreBtn = $('#adminSyncFromBtn');
+  restoreBtn.disabled = loading;
+  restoreBtn.textContent = loading ? '恢复中...' : '从 Gist 恢复';
 }
 
 function initAdminLayout() {
   const sidebar = $('#adminSidebar');
-  const adminPanel = $('#admin-panel');
   const logoutBtn = $('#adminLogoutBtn');
   const isLoggedIn = authIsLoggedIn();
 
-  function showAdminPanel() {
+  function applyAdminPanelVisibility() {
     sidebar?.classList.remove('hidden');
     logoutBtn?.classList.remove('hidden');
     document.getElementById('adminLoginPanel')?.classList.add('hidden');
   }
 
-  function showLogin() {
+  function applyLoginVisibility() {
     sidebar?.classList.add('hidden');
     logoutBtn?.classList.add('hidden');
     document.getElementById('adminLoginPanel')?.classList.remove('hidden');
   }
 
   if (isLoggedIn) {
-    showAdminPanel();
+    applyAdminPanelVisibility();
   }
 
   const tabBtns = sidebar?.querySelectorAll('.admin-tab-btn');
@@ -696,13 +699,14 @@ function initAdminLayout() {
     btn.addEventListener('click', () => {
       const tabId = btn.getAttribute('data-tab');
       if (!tabId) return;
+      applyAdminPanelVisibility();
       showAdminPanel(tabId);
     });
   });
 
   logoutBtn?.addEventListener('click', () => {
     authLogout();
-    showLogin();
+    applyLoginVisibility();
     showToast('已退出管理');
   });
 }
