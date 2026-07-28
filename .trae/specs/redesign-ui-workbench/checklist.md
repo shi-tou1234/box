@@ -12,4 +12,4 @@
 - [x] 后台导入/导出/同步/设置面板可切换并正常交互
 - [x] 移动端（<=768px）布局无严重错位，主要功能可访问
 - [x] 控制台无 JavaScript 错误
-- [ ] 代码已提交并推送至 `https://github.com/shi-tou1234/box`
+- [x] 代码已提交并推送至 `https://github.com/shi-tou1234/box`

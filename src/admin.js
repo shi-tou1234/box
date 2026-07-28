@@ -39,16 +39,49 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
+function formatLastSync(iso) {
+  if (!iso) return '从未同步';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '从未同步';
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return '最后同步：刚刚';
+  return `最后同步：${minutes} 分钟前`;
+}
+
+function readSettingsLastSync() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return '';
+    return JSON.parse(raw).lastSyncAt || '';
+  } catch {
+    return '';
+  }
+}
+
 function showToast(message, options = {}) {
   const container = $('#toast');
   if (!container) return;
+
+  const isError = options.isError || /失败|错误|Failed/i.test(message);
+  const duration = options.duration ?? (isError ? 6000 : 3000);
+
+  const existing = Array.from(container.children);
+  const MAX_TOASTS = 5;
+  while (existing.length >= MAX_TOASTS) {
+    existing.shift().remove();
+  }
+
   const item = document.createElement('div');
   item.className = 'toast__item';
+  if (isError) item.classList.add('toast__item--danger');
   item.textContent = message;
-  if (options.duration) {
-    setTimeout(() => item.remove(), options.duration);
-  }
   container.appendChild(item);
+
+  setTimeout(() => {
+    item.classList.add('toast--leave');
+    item.addEventListener('animationend', () => item.remove(), { once: true });
+  }, duration);
 }
 
 function applyAdminPanelVisibility() {
@@ -135,11 +168,11 @@ function renderAdminList() {
 
   if (!items.length) {
     if (listEl) listEl.innerHTML = '';
-    if (emptyEl) emptyEl.hidden = false;
+    if (emptyEl) emptyEl.classList.remove('hidden');
     return;
   }
 
-  if (emptyEl) emptyEl.hidden = true;
+  if (emptyEl) emptyEl.classList.add('hidden');
   if (!listEl) return;
 
   listEl.innerHTML = items
@@ -205,11 +238,33 @@ function getSelectedInventoryIds() {
   return Array.from($$('.inventory-check:checked')).map((node) => node.value);
 }
 
-function updateSyncStatus() {
+function renderSyncStatus() {
   const current = settingsRead();
-  const text = $('#syncStatusText');
-  if (!text) return;
-  text.textContent = current.gistUrl ? `已配置 Gist：${current.gistUrl}` : '未配置 Gist 地址';
+  const statusEl = $('#syncStatusText');
+  const timeEl = $('#syncLastTime');
+  if (statusEl) {
+    if (current.gistUrl) {
+      const url = escapeHtml(current.gistUrl);
+      statusEl.innerHTML = `当前 Gist：<a href="${url}" target="_blank">${url}</a>`;
+    } else {
+      statusEl.textContent = '未配置 Gist 地址';
+    }
+  }
+  if (timeEl) {
+    timeEl.textContent = formatLastSync(readSettingsLastSync());
+  }
+}
+
+function renderSettings() {
+  const current = settingsRead();
+  const currentGistEl = $('#settingsCurrentGist');
+  if (!currentGistEl) return;
+  if (current.gistUrl) {
+    const url = escapeHtml(current.gistUrl);
+    currentGistEl.innerHTML = `当前已保存的 Gist：<a href="${url}" target="_blank">${url}</a>`;
+  } else {
+    currentGistEl.textContent = '当前已保存的 Gist：未配置';
+  }
 }
 
 function showAdminPanel(panelId) {
@@ -232,7 +287,7 @@ function showAdminPanel(panelId) {
     renderInventory();
   }
   if (panelId === 'sync') {
-    updateSyncStatus();
+    renderSyncStatus();
   }
   if (panelId === 'settings') {
     const current = settingsRead();
@@ -244,6 +299,7 @@ function showAdminPanel(panelId) {
     if (gistInput) gistInput.value = current.gistUrl;
     if (passwordInput) passwordInput.value = authReadPassword();
     if (thresholdInput) thresholdInput.value = current.lowStockThreshold;
+    renderSettings();
   }
 }
 
@@ -627,10 +683,12 @@ async function syncFromGist() {
 
     state.items = remoteItems;
     storageWrite(state.items);
+    settingsWrite({ ...currentSettings, gistUrl, lastSyncAt: nowIso() });
     refreshFilters();
     renderAdminList();
     renderDetail();
     renderInventory();
+    renderSyncStatus();
     showToast('已从 Gist 恢复');
   } catch (error) {
     console.error(error);
@@ -681,7 +739,8 @@ async function syncToGist() {
     }
 
     const normalized = normalizeGistUrl(gist.html_url || currentSettings.gistUrl || '');
-    settingsWrite({ ...currentSettings, gistUrl: normalized });
+    settingsWrite({ ...currentSettings, gistUrl: normalized, lastSyncAt: nowIso() });
+    renderSyncStatus();
     showToast(`已同步到 Gist${normalized ? '：' + normalized : ''}`);
   } catch (error) {
     console.error(error);
@@ -746,7 +805,7 @@ function init() {
   renderCategoryDatalist();
   renderAdminList();
   renderDetail();
-  updateSyncStatus();
+  renderSyncStatus();
 
   $('#adminSearch')?.addEventListener('input', (event) => {
     state.filterText = event.target.value;
@@ -803,7 +862,7 @@ function init() {
     const password = $('#adminPassword').value || '';
     const lowStockThreshold = Number($('#lowStockThreshold').value);
     const current = settingsRead();
-    settingsWrite({ ...current, token, gistUrl, lowStockThreshold: Number.isFinite(lowStockThreshold) ? Math.max(0, lowStockThreshold) : 5 });
+    settingsWrite({ ...current, token, gistUrl, lowStockThreshold: Number.isFinite(lowStockThreshold) ? Math.max(0, lowStockThreshold) : 5, lastSyncAt: readSettingsLastSync() });
     if (password) authWritePassword(password);
     showToast('设置已保存');
     showAdminPanel('settings');

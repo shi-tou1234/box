@@ -1,53 +1,56 @@
 :root {
   /* --------------------------------------------------------------------------
-     Industrial Workbench — CSS Variables
-     深色仪器面板 + 琥珀/橙色强调，明暗双主题。
+     Clean SaaS — CSS Variables
+     参考 PartBolt / Linear / Notion 的简洁灰白+靛蓝风格，支持明暗双主题。
   -------------------------------------------------------------------------- */
 
   /* Background layers ------------------------------------------------------- */
-  --surface-base: #d9dce2;
-  --surface-panel: #e8eaed;
-  --surface-elevated: #f3f4f6;
-  --surface-inset: #c9cdd4;
-  --surface-header: color-mix(in srgb, var(--surface-panel) 92%, transparent);
+  --surface-base: #f8fafc;
+  --surface-backdrop: #f1f5f9;
+  --surface-panel: #ffffff;
+  --surface-elevated: #f8fafc;
+  --surface-inset: #f1f5f9;
+  --surface-header: rgba(255, 255, 255, 0.88);
 
   /* Text -------------------------------------------------------------------- */
-  --text-primary: #111317;
-  --text-secondary: #374151;
-  --text-muted: #6b7280;
-  --text-inverse: #e8e9eb;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #f8fafc;
+  --text-placeholder: #94a3b8;
 
   /* Borders ----------------------------------------------------------------- */
-  --border: #b8bcc4;
-  --border-strong: #9ca3af;
-  --border-divider: color-mix(in srgb, var(--border) 70%, transparent);
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --border-divider: color-mix(in srgb, var(--border) 80%, transparent);
 
-  /* Accent — amber/orange LED ----------------------------------------------- */
-  --accent: #d97706;
-  --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
-  --accent-glow: color-mix(in srgb, var(--accent) 25%, transparent);
-  --accent-text: #92400e;
+  /* Accent — indigo/blue ---------------------------------------------------- */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-soft: color-mix(in srgb, var(--accent) 8%, var(--surface-base));
+  --accent-glow: color-mix(in srgb, var(--accent) 20%, transparent);
+  --accent-text: #2563eb;
 
   /* Semantic ---------------------------------------------------------------- */
   --danger: #dc2626;
-  --danger-soft: color-mix(in srgb, var(--danger) 10%, transparent);
-  --danger-glow: color-mix(in srgb, var(--danger) 25%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 8%, var(--surface-base));
+  --danger-glow: color-mix(in srgb, var(--danger) 18%, transparent);
   --warning: #d97706;
-  --warning-soft: color-mix(in srgb, var(--warning) 10%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 10%, var(--surface-base));
   --success: #16a34a;
-  --success-soft: color-mix(in srgb, var(--success) 10%, transparent);
+  --success-soft: color-mix(in srgb, var(--success) 10%, var(--surface-base));
 
   /* Stock status ------------------------------------------------------------ */
-  --in-stock: #16a34a;
-  --in-stock-soft: color-mix(in srgb, var(--in-stock) 10%, transparent);
-  --low-stock: #d97706;
-  --low-stock-soft: color-mix(in srgb, var(--low-stock) 10%, transparent);
-  --out-of-stock: #dc2626;
-  --out-of-stock-soft: color-mix(in srgb, var(--out-of-stock) 10%, transparent);
+  --in-stock: var(--success);
+  --in-stock-soft: var(--success-soft);
+  --low-stock: var(--warning);
+  --low-stock-soft: var(--warning-soft);
+  --out-of-stock: var(--danger);
+  --out-of-stock-soft: var(--danger-soft);
 
   /* Typography -------------------------------------------------------------- */
+  --font-sans: 'Inter', 'IBM Plex Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', 'SF Mono', 'Fira Code', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-  --font-sans: 'Noto Sans SC', 'IBM Plex Sans', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-data: var(--font-mono);
   --font-label: var(--font-sans);
 
@@ -73,27 +76,27 @@
   --space-8: 32px;
   --space-10: 40px;
 
-  /* Hard, utilitarian radius ------------------------------------------------ */
-  --radius-sm: 2px;
-  --radius: 3px;
-  --radius-md: 4px;
+  /* Radius ------------------------------------------------------------------ */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-full: 999px;
 
-  /* Shadows — inset panels + subtle float ----------------------------------- */
-  --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.18);
-  --shadow-inset-strong: inset 0 2px 6px rgba(0, 0, 0, 0.22);
-  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.35) inset,
-                  0 1px 2px rgba(0, 0, 0, 0.12),
-                  0 4px 12px rgba(0, 0, 0, 0.10);
-  --shadow-float: 0 2px 0 rgba(255, 255, 255, 0.18) inset,
-                  0 4px 16px rgba(0, 0, 0, 0.22);
-  --shadow-glow-accent: 0 0 8px var(--accent-glow);
-  --shadow-glow-danger: 0 0 8px var(--danger-glow);
+  /* Shadows ----------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-base: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.05);
+  --shadow-float: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow-inset: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-up: 0 -4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-glow-accent: 0 0 0 3px var(--accent-glow);
+  --shadow-glow-danger: 0 0 0 3px var(--danger-glow);
 
   /* Layout ------------------------------------------------------------------ */
   --header-height: 56px;
-  --sidebar-width: 180px;
-  --topbar-sticky-offset: 8px;
+  --sidebar-width: 200px;
+  --topbar-sticky-offset: 12px;
   --panel-border: 1px solid var(--border);
 
   /* Transitions ------------------------------------------------------------- */
@@ -109,63 +112,57 @@
   --z-toast: 1000;
 
   /* Misc -------------------------------------------------------------------- */
-  --focus-ring: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent-glow);
-  --tick-color: color-mix(in srgb, var(--border-strong) 60%, transparent);
+  --focus-ring: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--accent-glow);
+  --focus-ring-inset: inset 0 0 0 2px var(--accent-glow);
+  --tick-color: color-mix(in srgb, var(--border-strong) 70%, transparent);
 }
 
-[data-theme="dark"] {
+[data-theme="dark"],
+html.dark {
   /* Background layers ------------------------------------------------------- */
-  --surface-base: #0b0c0e;
-  --surface-panel: #141619;
-  --surface-elevated: #1c1f24;
-  --surface-inset: #08090a;
-  --surface-header: color-mix(in srgb, var(--surface-panel) 92%, transparent);
+  --surface-base: #0f172a;
+  --surface-backdrop: #0b1222;
+  --surface-panel: #1e293b;
+  --surface-elevated: #334155;
+  --surface-inset: #0f172a;
+  --surface-header: rgba(30, 41, 59, 0.88);
 
   /* Text -------------------------------------------------------------------- */
-  --text-primary: #e8e9eb;
-  --text-secondary: #a8adb5;
-  --text-muted: #6b7280;
-  --text-inverse: #111317;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-inverse: #0f172a;
+  --text-placeholder: #64748b;
 
   /* Borders ----------------------------------------------------------------- */
-  --border: #2a2e35;
-  --border-strong: #3d434d;
+  --border: #334155;
+  --border-strong: #475569;
   --border-divider: color-mix(in srgb, var(--border) 70%, transparent);
 
-  /* Accent — amber/orange LED ----------------------------------------------- */
-  --accent: #f59e0b;
-  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
-  --accent-glow: color-mix(in srgb, var(--accent) 35%, transparent);
-  --accent-text: #fbbf24;
+  /* Accent — blue/cyan ------------------------------------------------------ */
+  --accent: #60a5fa;
+  --accent-hover: #38bdf8;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface-base));
+  --accent-glow: color-mix(in srgb, var(--accent) 24%, transparent);
+  --accent-text: #38bdf8;
 
   /* Semantic ---------------------------------------------------------------- */
-  --danger: #ef4444;
-  --danger-soft: color-mix(in srgb, var(--danger) 12%, transparent);
-  --danger-glow: color-mix(in srgb, var(--danger) 35%, transparent);
-  --warning: #f59e0b;
-  --warning-soft: color-mix(in srgb, var(--warning) 12%, transparent);
-  --success: #22c55e;
-  --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
+  --danger: #f87171;
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, var(--surface-base));
+  --danger-glow: color-mix(in srgb, var(--danger) 24%, transparent);
+  --warning: #fbbf24;
+  --warning-soft: color-mix(in srgb, var(--warning) 14%, var(--surface-base));
+  --success: #4ade80;
+  --success-soft: color-mix(in srgb, var(--success) 14%, var(--surface-base));
 
-  /* Stock status ------------------------------------------------------------ */
-  --in-stock: #22c55e;
-  --in-stock-soft: color-mix(in srgb, var(--in-stock) 12%, transparent);
-  --low-stock: #f59e0b;
-  --low-stock-soft: color-mix(in srgb, var(--low-stock) 12%, transparent);
-  --out-of-stock: #ef4444;
-  --out-of-stock-soft: color-mix(in srgb, var(--out-of-stock) 12%, transparent);
+  /* Shadows ----------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-base: 0 1px 3px rgba(0, 0, 0, 0.32), 0 4px 12px rgba(0, 0, 0, 0.22);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.24);
+  --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-up: 0 -4px 16px rgba(0, 0, 0, 0.25);
 
-  /* Shadows — inset panels + subtle float ----------------------------------- */
-  --shadow-inset: inset 0 1px 4px rgba(0, 0, 0, 0.55);
-  --shadow-inset-strong: inset 0 2px 8px rgba(0, 0, 0, 0.65);
-  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
-                  0 1px 2px rgba(0, 0, 0, 0.35),
-                  0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-float: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
-                  0 8px 28px rgba(0, 0, 0, 0.45);
-  --shadow-glow-accent: 0 0 10px var(--accent-glow);
-  --shadow-glow-danger: 0 0 10px var(--danger-glow);
-
-  --focus-ring: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent-glow);
-  --tick-color: color-mix(in srgb, var(--border-strong) 50%, transparent);
+  --focus-ring: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--accent-glow);
+  --focus-ring-inset: inset 0 0 0 2px var(--accent-glow);
 }

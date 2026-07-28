@@ -22,13 +22,26 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 function showToast(message, options = {}) {
   const container = $('#toast');
   if (!container) return;
+
+  const isError = options.isError || /失败|错误|Failed/i.test(message);
+  const duration = options.duration ?? (isError ? 6000 : 3000);
+
+  const existing = Array.from(container.children);
+  const MAX_TOASTS = 5;
+  while (existing.length >= MAX_TOASTS) {
+    existing.shift().remove();
+  }
+
   const item = document.createElement('div');
   item.className = 'toast__item';
+  if (isError) item.classList.add('toast__item--danger');
   item.textContent = message;
-  if (options.duration) {
-    setTimeout(() => item.remove(), options.duration);
-  }
   container.appendChild(item);
+
+  setTimeout(() => {
+    item.classList.add('toast--leave');
+    item.addEventListener('animationend', () => item.remove(), { once: true });
+  }, duration);
 }
 
 function getFilteredItems() {
@@ -100,23 +113,23 @@ function renderList() {
       const activeClass = item.id === state.selectedId ? 'is-active' : '';
       const quantityBadgeClass = item.quantity <= 0 ? 'badge--danger' : 'badge--accent';
       return `
-        <button type="button" class="data-row ${activeClass}" data-id="${escapeHtml(item.id)}">
-          <span class="data-row__primary">
-            <span class="data-row__name truncate">${escapeHtml(item.name || '未命名')}</span>
-            <span class="data-row__meta truncate">${escapeHtml(
+        <button type="button" class="card-item ${activeClass}" data-id="${escapeHtml(item.id)}">
+          <div style="min-width:0; flex:1; display:flex; flex-direction:column; gap:2px;">
+            <div class="truncate" style="font-weight:600; font-size:var(--text-base); color:var(--text-primary);">${escapeHtml(item.name || '未命名')}</div>
+            <div class="card-meta truncate">${escapeHtml(
               [item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息'
-            )}</span>
-          </span>
-          <span class="data-row__badges">
+            )}</div>
+          </div>
+          <div style="display:flex; gap:var(--space-1); align-items:center; flex-shrink:0;">
             <span class="badge badge--accent">${escapeHtml(item.category || '未分类')}</span>
             <span class="badge ${quantityBadgeClass}">${coerceQuantity(item.quantity)}</span>
-          </span>
+          </div>
         </button>
       `;
     })
     .join('');
 
-  $$('.data-row').forEach((node) => {
+  $$('.card-item').forEach((node) => {
     node.addEventListener('click', () => selectItem(node.dataset.id));
   });
 }
@@ -265,6 +278,8 @@ function init() {
   renderDetail();
   initTheme();
   initMobileNav();
+
+  window.showToast = showToast;
 
   $('#themeBtn').addEventListener('click', () => toggleTheme());
 
