@@ -1,21 +1,8 @@
-﻿import {
-  STORAGE_KEY,
-  SETTINGS_KEY,
+import {
   storageRead,
-  storageWrite,
-  settingsRead,
-  settingsWrite,
   coerceQuantity,
-  generateId,
-  nowIso,
   escapeHtml,
   getSortedItems,
-  parseImportedText,
-  summarizeChanges,
-  getCategoryOptions,
-  getPackageSuggestions,
-  resolveCategoryKey,
-  getUsedPackages,
 } from './shared.js';
 
 const state = {
@@ -27,7 +14,6 @@ const state = {
   filterStock: 'all',
   sortKey: 'updatedAt',
   sortDirection: 'desc',
-  syncLoading: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -35,6 +21,7 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
 function showToast(message, options = {}) {
   const container = $('#toast');
+  if (!container) return;
   const item = document.createElement('div');
   item.className = 'toast__item';
   item.textContent = message;
@@ -84,22 +71,6 @@ function refreshFilters() {
   state.filterPackage = packageSelect.value;
 }
 
-function renderCategoryDatalist() {
-  const datalist = $('#categoryOptions');
-  if (!datalist) return;
-  const options = Array.from(new Set(getCategoryOptions().concat(getUniqueValues('category')))).sort((a, b) => a.localeCompare(b, 'zh'));
-  datalist.innerHTML = options.map((option) => `<option value="${escapeHtml(option)}"></option>`).join('');
-}
-
-function renderPackageDatalist(category = '') {
-  const datalist = $('#packageOptions');
-  if (!datalist) return;
-  const suggestions = getPackageSuggestions(category);
-  const used = getUsedPackages(category);
-  const options = Array.from(new Set(suggestions.concat(used))).sort((a, b) => a.localeCompare(b, 'zh'));
-  datalist.innerHTML = options.map((option) => `<option value="${escapeHtml(option)}"></option>`).join('');
-}
-
 function renderList() {
   const filtered = getFilteredItems();
   const listEl = $('#componentList');
@@ -141,23 +112,20 @@ function renderList() {
 function renderDetail() {
   const item = state.items.find((entry) => entry.id === state.selectedId) || null;
   const titleEl = $('#detailTitle');
-  const actionsEl = $('#detailActions');
   const detailEl = $('#detail');
 
   if (!item) {
     titleEl.textContent = '选择一个元器件查看详情';
-    actionsEl.hidden = true;
     detailEl.innerHTML = `
       <div class="empty">
         <div class="empty__title">未选择条目</div>
-        <div class="empty__desc">从左侧列表选择一个元器件，即可查看详情与快速操作。</div>
+        <div class="empty__desc">从左侧列表选择一个元器件，即可查看详情。</div>
       </div>
     `;
     return;
   }
 
   titleEl.textContent = item.name || '未命名元器件';
-  actionsEl.hidden = false;
 
   const createdAtText = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN') : '-';
   const updatedAtText = item.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-CN') : '-';
@@ -211,406 +179,14 @@ function renderDetail() {
           <div class="mono">${escapeHtml(updatedAtText)}</div>
         </div>
       </div>
-      <div class="detail__actions">
-        <button class="button button--ghost" id="editBtn">编辑</button>
-        <button class="button button--ghost" id="copyBtn">复制</button>
-        <button class="button button--ghost" id="quantityBtn">调整数量</button>
-        <button class="button button--danger" id="detailDeleteBtn">删除</button>
-      </div>
     </div>
   `;
-
-  $('#editBtn')?.addEventListener('click', () => openForm(item));
-  $('#copyBtn')?.addEventListener('click', () => duplicateItem(item));
-  $('#quantityBtn')?.addEventListener('click', () => openQuantityDialog(item));
-  $('#detailDeleteBtn')?.addEventListener('click', () => deleteItem(item.id));
 }
 
 function selectItem(id) {
   state.selectedId = id;
   renderList();
   renderDetail();
-}
-
-function upsertItem(payload) {
-  const existing = state.items.find((item) => item.id === payload.id) || null;
-  const next = {
-    ...payload,
-    id: payload.id || generateId(),
-    quantity: coerceQuantity(payload.quantity),
-    createdAt: existing ? existing.createdAt : nowIso(),
-    updatedAt: nowIso(),
-  };
-
-  state.items = state.items.filter((item) => item.id !== next.id);
-  state.items.push(next);
-  storageWrite(state.items);
-  refreshFilters();
-  renderList();
-  renderCategoryDatalist();
-  renderPackageDatalist(next.category);
-  if (state.selectedId === next.id) {
-    renderDetail();
-  }
-}
-
-function deleteItem(id) {
-  if (!confirm('确定要删除这条元器件记录吗？')) {
-    return;
-  }
-  state.items = state.items.filter((item) => item.id !== id);
-  if (state.selectedId === id) {
-    state.selectedId = null;
-  }
-  storageWrite(state.items);
-  refreshFilters();
-  renderList();
-  renderDetail();
-  showToast('已删除');
-}
-
-function duplicateItem(item) {
-  if (!item) return;
-  const clone = {
-    ...item,
-    id: undefined,
-    name: `${item.name || '元器件'}（复制）`,
-    quantity: 0,
-    createdAt: undefined,
-    updatedAt: undefined,
-  };
-  upsertItem(clone);
-  showToast('已复制并新增副本');
-}
-
-function resetForm(item = null) {
-  $('#formId').value = item ? item.id : '';
-  $('#formName').value = item ? item.name || '' : '';
-  $('#formCategory').value = item ? item.category || '' : '';
-  $('#formModel').value = item ? item.model || '' : '';
-  $('#formPackage').value = item ? item.package || '' : '';
-  $('#formQuantity').value = item ? (item.quantity || 0) : 0;
-  $('#formLocation').value = item ? item.location || '' : '';
-  $('#formDatasheet').value = item ? item.datasheet || '' : '';
-  $('#formNotes').value = item ? item.notes || '' : '';
-}
-
-function readForm() {
-  return {
-    id: $('#formId').value || undefined,
-    name: $('#formName').value.trim(),
-    category: $('#formCategory').value.trim(),
-    model: $('#formModel').value.trim(),
-    package: $('#formPackage').value.trim(),
-    quantity: $('#formQuantity').value,
-    location: $('#formLocation').value.trim(),
-    datasheet: $('#formDatasheet').value.trim(),
-    notes: $('#formNotes').value.trim(),
-  };
-}
-
-function validateForm(payload) {
-  if (!payload.name) {
-    $('#formName').focus();
-    throw new Error('请填写名称');
-  }
-  if (!payload.category) {
-    $('#formCategory').focus();
-    throw new Error('请填写种类');
-  }
-}
-
-function openForm(item = null) {
-  const dialog = $('#formDialog');
-  $('#formDialogTitle').textContent = item ? '编辑元器件' : '新增元器件';
-  resetForm(item);
-  renderCategoryDatalist();
-  renderPackageDatalist(item ? item.category : '');
-  dialog.showModal();
-}
-
-function closeForm() {
-  $('#formDialog').close();
-}
-
-function submitForm(event) {
-  event.preventDefault();
-  const payload = readForm();
-  try {
-    validateForm(payload);
-  } catch (error) {
-    showToast(error.message, { duration: 2400 });
-    return;
-  }
-  upsertItem(payload);
-  closeForm();
-  showToast('已保存');
-}
-
-function openQuantityDialog(item) {
-  if (!item) return;
-  $('#quantityId').value = item.id;
-  $('#quantityMode').value = 'increase';
-  $('#quantityValue').value = '1';
-  $('#quantityDialog').showModal();
-}
-
-function closeQuantityDialog() {
-  $('#quantityDialog').close();
-}
-
-function submitQuantity(event) {
-  event.preventDefault();
-  const id = $('#quantityId').value;
-  const item = state.items.find((entry) => entry.id === id);
-  const mode = $('#quantityMode').value;
-  const value = coerceQuantity($('#quantityValue').value);
-
-  if (!id || !item) {
-    showToast('请先选择一个元器件');
-    return;
-  }
-  if (value <= 0 && mode !== 'set') {
-    showToast('数量必须大于 0');
-    return;
-  }
-
-  if (mode === 'increase') {
-    item.quantity = item.quantity + value;
-  } else if (mode === 'decrease') {
-    item.quantity = Math.max(0, item.quantity - value);
-  } else {
-    item.quantity = value;
-  }
-
-  item.updatedAt = nowIso();
-  storageWrite(state.items);
-  refreshFilters();
-  renderList();
-  renderDetail();
-  closeQuantityDialog();
-  showToast('数量已更新');
-}
-
-function openSettings() {
-  const current = settingsRead();
-  $('#githubToken').value = current.token;
-  $('#gistUrl').value = current.gistUrl;
-  $('#settingsDialog').showModal();
-}
-
-function updateSyncStatus() {
-  const current = settingsRead();
-  const text = $('#syncStatusText');
-  if (!text) return;
-  text.textContent = current.gistUrl ? `已配置 Gist：${current.gistUrl}` : '未配置 Gist 地址';
-}
-
-function closeSettings() {
-  $('#settingsDialog').close();
-}
-
-function submitSettings(event) {
-  event.preventDefault();
-  const token = $('#githubToken').value.trim();
-  const gistUrl = $('#gistUrl').value.trim();
-  settingsWrite({ ...settingsRead(), token, gistUrl });
-  closeSettings();
-  showToast('设置已保存');
-}
-
-function normalizeGistUrl(url) {
-  if (!url) return '';
-  const match = String(url).match(/gist\.github\.com\/([^/]+\/[^/?#]+)/);
-  return match ? `https://gist.github.com/${match[1]}` : String(url).trim();
-}
-
-async function githubRequest(path, options = {}) {
-  const currentSettings = settingsRead();
-  const token = (options.token || currentSettings.token || '').trim();
-  if (!token) {
-    throw new Error('请先在设置中填写 GitHub Token');
-  }
-  const response = await fetch(`https://api.github.com${path}`, {
-    ...options,
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  });
-  if (!response.ok) {
-    const message = await readGitHubError(response);
-    throw new Error(message || `GitHub 请求失败：${response.status}`);
-  }
-  return response.status === 204 ? null : response.json();
-}
-
-async function readGitHubError(response) {
-  try {
-    const data = await response.json();
-    return data.message || response.statusText;
-  } catch {
-    return response.statusText;
-  }
-}
-
-async function findGistFile(gist, filename = 'components.json') {
-  if (!gist || !gist.files) return null;
-  const file = gist.files[filename];
-  if (!file || !file.truncated) return file || null;
-  return file;
-}
-
-async function readGistContent(gist, filename = 'components.json') {
-  const file = await findGistFile(gist, filename);
-  if (!file || typeof file.content === 'undefined') {
-    return [];
-  }
-  if (file.truncated && file.raw_url) {
-    const response = await fetch(file.raw_url);
-    if (!response.ok) {
-      throw new Error('读取 Gist 文件内容失败');
-    }
-    const text = await response.text();
-    return parseImportedText(text);
-  }
-  return parseImportedText(file.content);
-}
-
-async function syncFromGist() {
-  if (state.syncLoading) return;
-  state.syncLoading = true;
-  setSyncLoading(true);
-
-  try {
-    const currentSettings = settingsRead();
-    const gistUrl = normalizeGistUrl(currentSettings.gistUrl || '');
-
-    if (!gistUrl) {
-      showToast('请先在设置中配置 Gist 地址', { duration: 2400 });
-      return;
-    }
-
-    showToast('正在从 Gist 恢复数据...');
-    const gist = await githubRequest(`/gists/${gistUrl.split('/').pop()}`);
-    const remoteItems = await readGistContent(gist);
-    const summary = summarizeChanges(state.items, remoteItems);
-
-    if (!confirm(`将从 Gist 恢复 ${summary.totalTarget} 条记录，其中新增 ${summary.added} 条、删除 ${summary.removed} 条，是否继续？`)) {
-      showToast('已取消恢复');
-      return;
-    }
-
-    state.items = remoteItems;
-    storageWrite(state.items);
-    refreshFilters();
-    renderList();
-    selectItem(state.selectedId);
-    showToast('已从 Gist 恢复');
-  } catch (error) {
-    console.error(error);
-    showToast(error.message || '同步失败');
-  } finally {
-    state.syncLoading = false;
-    setSyncLoading(false);
-  }
-}
-
-async function syncToGist() {
-  if (state.syncLoading) return;
-  state.syncLoading = true;
-  setSyncLoading(true);
-
-  try {
-    const currentSettings = settingsRead();
-    if (!currentSettings.token) {
-      showToast('请先在设置中填写 GitHub Token', { duration: 2400 });
-      return;
-    }
-
-    showToast('正在上传到 Gist...');
-    const filename = 'components.json';
-    const content = JSON.stringify(state.items, null, 2);
-    let gistId = currentSettings.gistUrl ? currentSettings.gistUrl.split('/').pop() : '';
-    let gist;
-
-    if (gistId) {
-      try {
-        gist = await githubRequest(`/gists/${gistId}`);
-      } catch (error) {
-        console.warn('读取已有 Gist 失败，将创建新的', error);
-        gistId = '';
-      }
-    }
-
-    if (!gistId || !gist) {
-      gist = await githubRequest('/gists', {
-        method: 'POST',
-        body: JSON.stringify({ public: false, files: { [filename]: { content } } }),
-      });
-    } else {
-      gist = await githubRequest(`/gists/${gistId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ files: { [filename]: { content } } }),
-      });
-    }
-
-    const normalized = normalizeGistUrl(gist.html_url || currentSettings.gistUrl || '');
-    settingsWrite({ ...currentSettings, gistUrl: normalized });
-    showToast(`已同步到 Gist${normalized ? '：' + normalized : ''}`);
-  } catch (error) {
-    console.error(error);
-    showToast(error.message || '同步失败');
-  } finally {
-    state.syncLoading = false;
-    setSyncLoading(false);
-  }
-}
-
-function setSyncLoading(loading) {
-  const syncBtn = $('#syncBtn');
-  syncBtn.disabled = loading;
-  syncBtn.textContent = loading ? '同步中...' : '同步';
-}
-
-function exportJson() {
-  const blob = new Blob([JSON.stringify(state.items, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'solder-components.json';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  showToast('已导出 JSON');
-}
-
-function importJson(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const remoteItems = parseImportedText(reader.result);
-      const summary = summarizeChanges(state.items, remoteItems);
-      if (!confirm(`将导入 ${summary.totalTarget} 条记录，其中新增 ${summary.added} 条、删除 ${summary.removed} 条，是否继续？`)) {
-        showToast('已取消导入');
-        return;
-      }
-      state.items = remoteItems;
-      storageWrite(state.items);
-      refreshFilters();
-      renderList();
-      selectItem(state.selectedId);
-      showToast('导入成功');
-    } catch (error) {
-      console.error(error);
-      showToast(error.message || '导入失败');
-    }
-  };
-  reader.readAsText(file);
 }
 
 function toggleTheme(nextTheme) {
@@ -663,24 +239,11 @@ function initMobileNav() {
 function init() {
   state.items = storageRead();
   refreshFilters();
-  renderCategoryDatalist();
   renderList();
   renderDetail();
-  updateSyncStatus();
   initTheme();
   initMobileNav();
 
-  $('#newBtn').addEventListener('click', () => openForm());
-  $('#queryNewBtn').addEventListener('click', () => openForm());
-  $('#settingsBtn').addEventListener('click', openSettings);
-  $('#syncBtn').addEventListener('click', syncToGist);
-  $('#exportBtn').addEventListener('click', exportJson);
-  $('#importBtn').addEventListener('click', () => $('#importFile').click());
-  $('#importFile').addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (file) importJson(file);
-    event.target.value = '';
-  });
   $('#themeBtn').addEventListener('click', () => toggleTheme());
 
   $('#search').addEventListener('input', (event) => {
@@ -690,7 +253,6 @@ function init() {
   $('#filterCategory').addEventListener('change', (event) => {
     state.filterCategory = event.target.value;
     renderList();
-    renderPackageDatalist(state.filterCategory);
   });
   $('#filterPackage').addEventListener('change', (event) => {
     state.filterPackage = event.target.value;
@@ -700,40 +262,6 @@ function init() {
     state.filterStock = event.target.value;
     renderList();
   });
-  $('#filterCategory').addEventListener('input', () => {
-    renderPackageDatalist($('#filterCategory').value);
-  });
-
-  $('#saveBtn').addEventListener('click', () => {
-    const item = state.items.find((entry) => entry.id === state.selectedId);
-    openForm(item || null);
-  });
-  $('#deleteBtn').addEventListener('click', () => {
-    if (state.selectedId) deleteItem(state.selectedId);
-  });
-
-  $('#formDialog').addEventListener('click', (event) => {
-    if (event.target === $('#formDialog')) closeForm();
-  });
-  $('#closeFormBtn').addEventListener('click', closeForm);
-  $('#cancelFormBtn').addEventListener('click', closeForm);
-  $('#componentForm').addEventListener('submit', submitForm);
-
-  $('#quantityDialog').addEventListener('click', (event) => {
-    if (event.target === $('#quantityDialog')) closeQuantityDialog();
-  });
-  $('#closeQuantityBtn').addEventListener('click', closeQuantityDialog);
-  $('#cancelQuantityBtn').addEventListener('click', closeQuantityDialog);
-  $('#quantityForm').addEventListener('submit', submitQuantity);
-
-  $('#settingsDialog').addEventListener('click', (event) => {
-    if (event.target === $('#settingsDialog')) closeSettings();
-  });
-  $('#closeSettingsBtn').addEventListener('click', closeSettings);
-  $('#cancelSettingsBtn').addEventListener('click', closeSettings);
-  $('#settingsForm').addEventListener('submit', submitSettings);
-
-  updateSyncStatus();
 }
 
 document.addEventListener('DOMContentLoaded', init);

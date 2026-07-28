@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -65,13 +65,14 @@
         </button>
       </nav>
       <main class="admin-main">
-        <section class="admin-panel" data-panel="components">
+        <section class="admin-panel hidden" data-panel="components">
           <div class="admin-panel-header">
             <div>
               <div class="panel__title">元器件管理</div>
               <div class="field__hint mt-2">支持新增、编辑、复制、删除，可按名称/型号/种类/封装快速筛选。</div>
             </div>
             <div class="panel__actions">
+              <span class="toolbar__summary" id="adminListSummary">共 0 项</span>
               <button class="button button--primary button--small" id="adminNewBtn">新增元器件</button>
             </div>
           </div>
@@ -297,7 +298,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <input type="file" id="adminImportFile" accept="application/json" hidden />
-  <script src="../src/shared.js"></script>
-  <script src="admin.js"></script>
+  <script type="module" src="../src/admin.js"></script>
 </body>
 </html>
