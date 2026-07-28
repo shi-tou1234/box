@@ -698,6 +698,12 @@ function initAdminLayout() {
     applyAdminPanelVisibility();
   } else {
     applyLoginVisibility();
+    const hint = $('#adminLoginHint');
+    if (hint) {
+      hint.textContent = authReadPassword()
+        ? '请输入管理密码。忘记密码可在浏览器 localStorage 中清除 solder_pm.auth 键。'
+        : '首次进入时输入的密码将被设为管理密码，请妥善记忆。';
+    }
   }
 
   const tabBtns = sidebar?.querySelectorAll('.admin-tab-btn');

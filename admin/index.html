@@ -194,11 +194,12 @@
 
         <section class="admin-panel hidden" data-panel="login" id="adminLoginPanel">
           <div class="admin-login-card">
-            <div class="panel__title">请输入管理密码</div>
+            <div class="panel__title">管理后台登录</div>
             <form class="form" id="adminLoginForm" autocomplete="off">
               <div class="field">
                 <label class="field__label" for="adminLoginPassword">密码</label>
                 <input class="input" id="adminLoginPassword" type="password" placeholder="password" required />
+                <div class="field__hint" id="adminLoginHint">首次进入时输入的密码将被设为管理密码，请妥善记忆。</div>
               </div>
               <div class="dialog__footer" style="margin-top:14px;">
                 <button type="submit" class="button button--primary">进入管理后台</button>
