@@ -1,4 +1,4 @@
-﻿import {
+import {
   STORAGE_KEY,
   SETTINGS_KEY,
   AUTH_KEY,
@@ -77,11 +77,12 @@ function getUniqueValues(key) {
 }
 
 function refreshFilters() {
-  const categories = getUniqueValues('category');
-  const packages = getUniqueValues('package');
-
   const categorySelect = $('#filterCategory');
   const packageSelect = $('#filterPackage');
+  if (!categorySelect || !packageSelect) return;
+
+  const categories = getUniqueValues('category');
+  const packages = getUniqueValues('package');
 
   categorySelect.innerHTML = '<option value="">全部</option>' + categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
   packageSelect.innerHTML = '<option value="">全部</option>' + packages.map((pkg) => `<option value="${escapeHtml(pkg)}">${escapeHtml(pkg)}</option>`).join('');
@@ -220,10 +221,11 @@ function showAdminPanel(panelId) {
 }
 
 function renderDetail() {
+  const detailEl = $('#detail');
+  if (!detailEl) return;
   const item = state.items.find((entry) => entry.id === state.selectedId) || null;
   const titleEl = $('#detailTitle');
   const actionsEl = $('#detailActions');
-  const detailEl = $('#detail');
 
   if (!item) {
     titleEl.textContent = '选择一个元器件查看详情';
@@ -310,7 +312,8 @@ function renderDetail() {
 function selectItem(id) {
   state.selectedId = id;
   renderAdminList();
-  renderDetail();
+  const item = state.items.find((entry) => entry.id === id) || null;
+  if (item) openForm(item);
 }
 
 function upsertItem(payload) {
@@ -693,6 +696,8 @@ function initAdminLayout() {
 
   if (isLoggedIn) {
     applyAdminPanelVisibility();
+  } else {
+    applyLoginVisibility();
   }
 
   const tabBtns = sidebar?.querySelectorAll('.admin-tab-btn');
