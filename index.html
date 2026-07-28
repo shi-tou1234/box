@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="color-scheme" content="dark" />
+  <meta name="color-scheme" content="light" />
   <title>BENCH-01 | 焊接元器件查询/管理工具</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles/variables.css" />
+  <link rel="stylesheet" href="styles/components.css" />
 </head>
 <body>
   <div class="app">
@@ -30,11 +31,11 @@
         <span class="app-header__divider" aria-hidden="true"></span>
         <div class="app-header__actions" id="headerActions">
           <button class="button button--primary" id="newBtn" title="新增元器件">+ 新增</button>
+          <a class="button button--ghost" href="admin/" target="_blank">管理后台</a>
           <button class="button button--ghost" id="syncBtn" title="GitHub Gist 同步">同步</button>
           <button class="button button--ghost" id="importBtn" title="导入 JSON">导入</button>
           <button class="button button--ghost" id="exportBtn" title="导出 JSON">导出</button>
           <button class="button button--ghost" id="settingsBtn" title="设置">设置</button>
-          <button class="button button--ghost" id="openAdminBtn" title="进入管理">进入管理</button>
         </div>
       </div>
     </header>
@@ -383,7 +384,7 @@
     <input type="file" id="importFile" accept="application/json" hidden />
     <input type="file" id="adminImportFile" accept="application/json" hidden />
 
-    <script src="packages.js"></script>
-    <script src="app.js"></script>
+    <script src="src/shared.js"></script>
+    <script src="src/query.js"></script>
   </body>
   </html>

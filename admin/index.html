@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <title>元器件管理 - Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/components.css" />
+</head>
+<body>
+  <div class="admin-shell" id="adminShell">
+    <header class="admin-topbar">
+      <div class="admin-topbar__brand">
+        <div class="admin-topbar__logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        </div>
+        <div class="admin-topbar__text">
+          <div class="admin-topbar__title">元器件管理</div>
+          <div class="admin-topbar__subtitle">管理后台</div>
+        </div>
+      </div>
+      <div class="admin-topbar__actions">
+        <a class="button button--ghost button--small" href="../" target="_blank">打开前台</a>
+        <button class="button button--ghost button--small" id="adminLogoutBtn">退出</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      <nav class="admin-sidebar" id="adminSidebar" aria-label="管理导航">
+        <button class="admin-tab-btn" data-tab="components" aria-selected="true">
+          <span class="admin-tab-icon">🔧</span>
+          <span class="admin-tab-label">元器件</span>
+        </button>
+        <button class="admin-tab-btn" data-tab="inventory" aria-selected="false">
+          <span class="admin-tab-icon">📦</span>
+          <span class="admin-tab-label">库存</span>
+        </button>
+        <button class="admin-tab-btn" data-tab="transfer" aria-selected="false">
+          <span class="admin-tab-icon">🚚</span>
+          <span class="admin-tab-label">导入导出</span>
+        </button>
+        <button class="admin-tab-btn" data-tab="sync" aria-selected="false">
+          <span class="admin-tab-icon">🔁</span>
+          <span class="admin-tab-label">同步</span>
+        </button>
+        <button class="admin-tab-btn" data-tab="settings" aria-selected="false">
+          <span class="admin-tab-icon">⚙️</span>
+          <span class="admin-tab-label">设置</span>
+        </button>
+      </nav>
+      <main class="admin-main">
+        <section class="admin-panel" data-panel="components">
+          <div class="admin-panel-header">
+            <div>
+              <div class="panel__title">元器件管理</div>
+              <div class="field__hint mt-2">支持新增、编辑、复制、删除，并可按名称/型号/种类/封装快速检索。</div>
+            </div>
+            <div class="panel__actions">
+              <button class="button button--primary button--small" id="adminNewBtn">新增元器件</button>
+            </div>
+          </div>
+          <div class="admin-list" id="adminComponentList"></div>
+          <div class="empty" id="adminListEmpty">
+            <div class="empty__title">暂无元器件</div>
+            <div class="empty__desc">点击“新增元器件”开始录入。</div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-panel="inventory">
+          <div class="admin-panel-header">
+            <div>
+              <div class="panel__title">库存管理</div>
+              <div class="field__hint mt-2">统一查看当前库存与低库存条目，支持批量删除低库存或清零数量。</div>
+            </div>
+            <div class="panel__actions">
+              <button class="button button--ghost button--small" id="batchClearBtn">批量清零</button>
+              <button class="button button--danger button--small" id="batchDeleteBtn">批量删除</button>
+            </div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="inventoryCheckAll" /></th>
+                  <th>名称</th>
+                  <th>种类</th>
+                  <th>型号</th>
+                  <th>封装</th>
+                  <th>数量</th>
+                  <th>位置/库位</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryBody"></tbody>
+            </table>
+          </div>
+          <div class="empty hidden" id="inventoryEmpty">
+            <div class="empty__title">暂无库存数据</div>
+            <div class="empty__desc">先新增元器件后再到这里管理数量。</div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-panel="transfer">
+          <div class="admin-panel-header">
+            <div>
+              <div class="panel__title">导入导出</div>
+              <div class="field__hint mt-2">支持 JSON 全量导入导出，导入前会提示差异，避免静默覆盖。</div>
+            </div>
+            <div class="panel__actions">
+              <button class="button button--ghost button--small" id="adminExportBtn">导出 JSON</button>
+              <button class="button button--primary button--small" id="adminImportBtn">导入 JSON</button>
+            </div>
+          </div>
+          <div class="admin-transfer">
+            <div class="field">
+              <div class="field__label">操作说明</div>
+              <div class="mono">导出文件为 `solder-components.json`；导入时会对比本地记录数、新增数与移除数。</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-panel="sync">
+          <div class="admin-panel-header">
+            <div>
+              <div class="panel__title">同步设置</div>
+              <div class="field__hint mt-2">通过 GitHub Gist 备份当前数据，也可从 Gist 恢复到本机。</div>
+            </div>
+            <div class="panel__actions">
+              <button class="button button--primary button--small" id="adminSyncToBtn">上传到 Gist</button>
+              <button class="button button--ghost button--small" id="adminSyncFromBtn">从 Gist 恢复</button>
+            </div>
+          </div>
+          <div class="admin-transfer">
+            <div class="field">
+              <div class="field__label">当前同步状态</div>
+              <div class="mono" id="syncStatusText">未配置 Gist 地址。</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-panel="settings">
+          <div class="admin-panel-header">
+            <div>
+              <div class="panel__title">设置</div>
+              <div class="field__hint mt-2">管理 GitHub Token、Gist 地址、管理员密码与低库存阈值。</div>
+            </div>
+          </div>
+          <form class="form" id="adminSettingsForm" autocomplete="off">
+            <div class="form__grid">
+              <div class="field field--full">
+                <label class="field__label" for="adminGithubToken">GitHub Personal Access Token（gist 权限）</label>
+                <input class="input" id="adminGithubToken" placeholder="ghp_..." />
+                <div class="field__hint">建议使用 classic token，仅授予 gist 权限；不会上传到任何第三方服务。</div>
+              </div>
+              <div class="field field--full">
+                <label class="field__label" for="adminGistUrl">现有 Gist 地址</label>
+                <input class="input" id="adminGistUrl" placeholder="https://gist.github.com/..." />
+                <div class="field__hint">留空会在同步时自动创建新的私有 Gist。</div>
+              </div>
+              <div class="field field--full">
+                <label class="field__label" for="adminPassword">管理员密码</label>
+                <input class="input" id="adminPassword" type="password" placeholder="用于进入管理页" />
+                <div class="field__hint">密码仅保存在当前浏览器；清空后不再要求登录。</div>
+              </div>
+              <div class="field field--full">
+                <label class="field__label" for="lowStockThreshold">低库存阈值</label>
+                <input class="input" id="lowStockThreshold" type="number" inputmode="numeric" min="0" step="1" />
+                <div class="field__hint">数量小于等于该值时，列表中会显示低库存提示。</div>
+              </div>
+            </div>
+            <div class="dialog__footer" style="margin-top:14px;">
+              <button type="button" class="button button--ghost" id="adminSettingsResetBtn">重置为默认</button>
+              <button type="submit" class="button button--primary">保存设置</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="admin-panel hidden" data-panel="login" id="adminLoginPanel">
+          <div class="admin-login-card">
+            <div class="panel__title">请输入管理员密码</div>
+            <form class="form" id="adminLoginForm" autocomplete="off">
+              <div class="field">
+                <label class="field__label" for="adminLoginPassword">密码</label>
+                <input class="input" id="adminLoginPassword" type="password" placeholder="password" required />
+              </div>
+              <div class="dialog__footer" style="margin-top:14px;">
+                <button type="submit" class="button button--primary">进入管理</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="dialog" id="formDialog" aria-modal="true" aria-labelledby="formDialogTitle">
+    <div class="dialog__body">
+      <div class="dialog__header">
+        <div class="dialog__title" id="formDialogTitle">新增元器件</div>
+        <button class="button button--ghost button--icon" id="closeFormBtn" aria-label="关闭">✕</button>
+      </div>
+      <form class="form" id="componentForm" autocomplete="off">
+        <input type="hidden" id="formId" />
+        <div class="form__grid">
+          <div class="field">
+            <label class="field__label" for="formName">名称 <span class="required">*</span></label>
+            <input class="input" id="formName" required />
+          </div>
+          <div class="field">
+            <label class="field__label" for="formCategory">种类 <span class="required">*</span></label>
+            <input class="input" id="formCategory" list="categoryOptions" required placeholder="电阻、电容、MCU..." />
+            <datalist id="categoryOptions"></datalist>
+          </div>
+          <div class="field">
+            <label class="field__label" for="formModel">型号</label>
+            <input class="input" id="formModel" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="formPackage">封装</label>
+            <input class="input" id="formPackage" list="packageOptions" placeholder="0805、SOT-23..." />
+            <datalist id="packageOptions"></datalist>
+          </div>
+          <div class="field">
+            <label class="field__label" for="formQuantity">数量</label>
+            <input class="input" id="formQuantity" type="number" inputmode="numeric" min="0" step="1" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="formLocation">位置/库位</label>
+            <input class="input" id="formLocation" />
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="formDatasheet">数据手册链接</label>
+            <input class="input" id="formDatasheet" placeholder="https://..." />
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="formNotes">备注</label>
+            <textarea class="textarea" id="formNotes" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="dialog__footer">
+          <button type="button" class="button button--ghost" id="cancelFormBtn">取消</button>
+          <button type="submit" class="button button--primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="dialog" id="quantityDialog" aria-modal="true" aria-labelledby="quantityDialogTitle">
+    <div class="dialog__body">
+      <div class="dialog__header">
+        <div class="dialog__title" id="quantityDialogTitle">调整数量</div>
+        <button class="button button--ghost button--icon" id="closeQuantityBtn" aria-label="关闭">✕</button>
+      </div>
+      <form class="form" id="quantityForm" autocomplete="off">
+        <input type="hidden" id="quantityId" />
+        <div class="form__grid">
+          <div class="field">
+            <label class="field__label" for="quantityMode">模式</label>
+            <select class="select" id="quantityMode">
+              <option value="increase">增加</option>
+              <option value="decrease">减少</option>
+              <option value="set">设为</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="quantityValue">数量 <span class="required">*</span></label>
+            <input class="input" id="quantityValue" type="number" inputmode="numeric" min="0" step="1" required />
+          </div>
+        </div>
+        <div class="dialog__footer">
+          <button type="button" class="button button--ghost" id="cancelQuantityBtn">取消</button>
+          <button type="submit" class="button button--primary">应用</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <input type="file" id="adminImportFile" accept="application/json" hidden />
+
+  <script src="../src/shared.js"></script>
+  <script src="app.js"></script>
+  </body>
+  </html>
