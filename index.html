@@ -6,9 +6,92 @@
   <title>BENCH-01 | 焊接元器件查询</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles/variables.css" />
   <link rel="stylesheet" href="styles/components.css" />
+  <style>
+    .topbar__filters {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-2);
+      flex: 1;
+      min-width: 0;
+    }
+    .topbar__filters .field {
+      margin: 0;
+      min-width: 0;
+    }
+    .topbar__filters .field:first-child {
+      flex: 1 1 140px;
+    }
+    .topbar__filters .field:not(:first-child) {
+      flex: 0 1 110px;
+    }
+    .topbar__filters .field__label {
+      margin-bottom: 2px;
+    }
+
+    .split-layout--query {
+      grid-template-columns: minmax(280px, 360px) 1fr;
+    }
+
+    .data-row__primary {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .data-row__name {
+      font-weight: 600;
+      font-size: var(--text-base);
+      color: var(--text-primary);
+    }
+    .data-row__meta {
+      font-family: var(--font-data);
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+    .data-row__badges {
+      display: flex;
+      gap: var(--space-1);
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 860px) {
+      .split-layout--query {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .topbar__inner {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: var(--header-height);
+        padding: var(--space-2) var(--space-3);
+      }
+      .topbar__filters {
+        order: 3;
+        width: 100%;
+      }
+      .topbar__filters .field:first-child,
+      .topbar__filters .field:not(:first-child) {
+        flex: 1 1 100px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .topbar__filters .field:first-child,
+      .topbar__filters .field:not(:first-child) {
+        flex: 1 1 80px;
+      }
+      .topbar__filters .field__label {
+        font-size: 10px;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="app-shell">
@@ -16,7 +99,7 @@
       <div class="topbar__inner">
         <a class="brand" href="/">
           <span class="brand__mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
@@ -26,83 +109,91 @@
             <span class="brand__subtitle">焊接元器件查询</span>
           </span>
         </a>
-        <div class="topbar__actions">
-          <button class="icon-button" id="themeBtn" title="切换主题" aria-label="切换主题" type="button">
-            <svg class="icon theme-icon__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="5" />
-              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-            </svg>
-            <svg class="icon theme-icon__moon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-          </button>
+
+        <div class="topbar__filters">
+          <div class="field">
+            <label class="field__label" for="search">搜索</label>
+            <input class="input" id="search" type="text" placeholder="名称 / 型号" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="filterCategory">种类</label>
+            <select class="select" id="filterCategory"><option value="">全部</option></select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="filterPackage">封装</label>
+            <select class="select" id="filterPackage"><option value="">全部</option></select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="filterStock">库存</label>
+            <select class="select" id="filterStock">
+              <option value="all">全部</option>
+              <option value="in">有货</option>
+              <option value="out">缺货</option>
+            </select>
+          </div>
         </div>
+
+        <button class="button button--icon" id="themeBtn" title="切换主题" aria-label="切换主题" type="button">
+          <svg class="icon theme-icon__sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+          </svg>
+          <svg class="icon theme-icon__moon hidden" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
       </div>
     </header>
 
-    <main class="page">
-      <section class="toolbar">
-        <div class="field">
-          <label class="field__label" for="search">搜索</label>
-          <input class="input" id="search" placeholder="按名称或型号搜索" />
+    <main class="split-layout split-layout--query">
+      <section class="panel panel--list">
+        <div class="panel__header">
+          <div class="panel__title">元器件列表</div>
+          <div class="panel__actions">
+            <span class="hint" id="listSummary">共 0 项</span>
+          </div>
         </div>
-        <div class="field">
-          <label class="field__label" for="filterCategory">种类</label>
-          <select class="select" id="filterCategory"><option value="">全部</option></select>
+        <div class="data-list" id="componentList"></div>
+        <div class="empty-state hidden" id="listEmpty">
+          <div class="empty-state__title">暂无匹配结果</div>
+          <div class="empty-state__desc">尝试调整筛选条件，或前往管理后台录入数据。</div>
         </div>
-        <div class="field">
-          <label class="field__label" for="filterPackage">封装</label>
-          <select class="select" id="filterPackage"><option value="">全部</option></select>
-        </div>
-        <div class="field">
-          <label class="field__label" for="filterStock">库存</label>
-          <select class="select" id="filterStock">
-            <option value="all">全部</option>
-            <option value="in">有货</option>
-            <option value="out">缺货</option>
-          </select>
-        </div>
-        <div class="toolbar__summary" id="listSummary">共 0 项</div>
       </section>
 
-      <section class="panels">
-        <section class="panel panel--list">
-          <div class="panel__header">
-            <div class="panel__title">元器件列表</div>
+      <section class="panel panel--detail" id="queryDetailPanel">
+        <div class="panel__header">
+          <div class="panel__title" id="detailTitle">详情</div>
+        </div>
+        <div class="detail" id="detail">
+          <div class="empty-state">
+            <div class="empty-state__title">未选择条目</div>
+            <div class="empty-state__desc">从左侧列表选择一个元器件，即可查看详情。</div>
           </div>
-          <div class="list" id="componentList"></div>
-          <div class="empty" id="listEmpty">
-            <div class="empty__title">暂无元器件</div>
-            <div class="empty__desc">请前往管理后台录入或导入数据。</div>
-          </div>
-        </section>
-
-        <section class="panel panel--detail" id="queryDetailPanel">
-          <div class="panel__header">
-            <div class="panel__title" id="detailTitle">选择一个元器件查看详情</div>
-          </div>
-          <div class="detail" id="detail">
-            <div class="empty">
-              <div class="empty__title">未选择条目</div>
-              <div class="empty__desc">从左侧列表选择一个元器件，即可查看详情。</div>
-            </div>
-          </div>
-        </section>
+        </div>
       </section>
     </main>
 
     <nav class="mobile-nav" aria-label="底部快捷导航">
       <a class="mobile-nav__item is-active" href="/">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
         <span>查询</span>
       </a>
       <a class="mobile-nav__item" href="admin/">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+        </svg>
         <span>管理</span>
       </a>
     </nav>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="src/front.js"></script>
-  </body>
-  </html>
+  </div>
+  <script type="module" src="src/front.js"></script>
+</body>
+</html>

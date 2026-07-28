@@ -41,6 +41,7 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
 function showToast(message, options = {}) {
   const container = $('#toast');
+  if (!container) return;
   const item = document.createElement('div');
   item.className = 'toast__item';
   item.textContent = message;
@@ -48,6 +49,18 @@ function showToast(message, options = {}) {
     setTimeout(() => item.remove(), options.duration);
   }
   container.appendChild(item);
+}
+
+function applyAdminPanelVisibility() {
+  $('#adminBody')?.classList.remove('hidden');
+  $('#adminLogoutBtn')?.classList.remove('hidden');
+  $('#adminLoginPanel')?.classList.add('hidden');
+}
+
+function applyLoginVisibility() {
+  $('#adminBody')?.classList.add('hidden');
+  $('#adminLogoutBtn')?.classList.add('hidden');
+  $('#adminLoginPanel')?.classList.remove('hidden');
 }
 
 function getFilteredItems() {
@@ -77,8 +90,10 @@ function getUniqueValues(key) {
 }
 
 function refreshFilters() {
+  const searchInput = $('#adminSearch');
   const categorySelect = $('#filterCategory');
   const packageSelect = $('#filterPackage');
+  const stockSelect = $('#filterStock');
   if (!categorySelect || !packageSelect) return;
 
   const categories = getUniqueValues('category');
@@ -89,6 +104,8 @@ function refreshFilters() {
 
   state.filterCategory = categorySelect.value;
   state.filterPackage = packageSelect.value;
+  state.filterStock = stockSelect ? stockSelect.value : 'all';
+  state.filterText = searchInput ? searchInput.value : '';
 }
 
 function renderCategoryDatalist() {
@@ -111,15 +128,20 @@ function renderAdminList() {
   const emptyEl = $('#adminListEmpty');
   const items = getFilteredItems();
 
-  $('#adminListSummary').textContent = `共 ${items.length} 项 / 全部 ${state.items.length} 项`;
+  const summaryEl = $('#adminListSummary');
+  if (summaryEl) {
+    summaryEl.textContent = `共 ${items.length} 项 / 全部 ${state.items.length} 项`;
+  }
 
   if (!items.length) {
-    listEl.innerHTML = '';
-    emptyEl.hidden = false;
+    if (listEl) listEl.innerHTML = '';
+    if (emptyEl) emptyEl.hidden = false;
     return;
   }
 
-  emptyEl.hidden = true;
+  if (emptyEl) emptyEl.hidden = true;
+  if (!listEl) return;
+
   listEl.innerHTML = items
     .map((item) => {
       const activeClass = item.id === state.selectedId ? 'is-active' : '';
@@ -147,7 +169,7 @@ function renderInventory() {
   const tbody = $('#inventoryBody');
   const emptyEl = $('#inventoryEmpty');
   if (!tbody) return;
-  const threshold = Number($('#lowStockThreshold')?.value ?? settingsRead().lowStockThreshold);
+  const threshold = settingsRead().lowStockThreshold;
   const items = getSortedItems(state.items, 'name', 'asc');
 
   if (!items.length) {
@@ -191,11 +213,12 @@ function updateSyncStatus() {
 }
 
 function showAdminPanel(panelId) {
-  const buttons = $$('#adminSidebar .admin-tab-btn');
+  const buttons = $$('#adminSidebar .nav-item');
   const panels = $$('.admin-panel');
   buttons.forEach((btn) => {
     const selected = btn.getAttribute('data-tab') === panelId;
     btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+    btn.classList.toggle('nav-item--active', selected);
   });
   panels.forEach((panel) => {
     const panelIdAttr = panel.getAttribute('data-panel');
@@ -213,10 +236,14 @@ function showAdminPanel(panelId) {
   }
   if (panelId === 'settings') {
     const current = settingsRead();
-    $('#adminGithubToken').value = current.token;
-    $('#adminGistUrl').value = current.gistUrl;
-    $('#adminPassword').value = authReadPassword();
-    $('#lowStockThreshold').value = current.lowStockThreshold;
+    const tokenInput = $('#adminGithubToken');
+    const gistInput = $('#adminGistUrl');
+    const passwordInput = $('#adminPassword');
+    const thresholdInput = $('#lowStockThreshold');
+    if (tokenInput) tokenInput.value = current.token;
+    if (gistInput) gistInput.value = current.gistUrl;
+    if (passwordInput) passwordInput.value = authReadPassword();
+    if (thresholdInput) thresholdInput.value = current.lowStockThreshold;
   }
 }
 
@@ -228,19 +255,19 @@ function renderDetail() {
   const actionsEl = $('#detailActions');
 
   if (!item) {
-    titleEl.textContent = '选择一个元器件查看详情';
-    actionsEl.hidden = true;
+    if (titleEl) titleEl.textContent = '选择一个元器件查看详情';
+    if (actionsEl) actionsEl.hidden = true;
     detailEl.innerHTML = `
       <div class="empty">
         <div class="empty__title">未选择条目</div>
-        <div class="empty__desc">从列表选择一个元器件，即可查看详情与快速操作。</div>
+        <div class="empty__desc">从左侧列表选择一个元器件，即可查看详情与快速操作。</div>
       </div>
     `;
     return;
   }
 
-  titleEl.textContent = item.name || '未命名元器件';
-  actionsEl.hidden = false;
+  if (titleEl) titleEl.textContent = item.name || '未命名元器件';
+  if (actionsEl) actionsEl.hidden = false;
 
   const createdAtText = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN') : '-';
   const updatedAtText = item.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-CN') : '-';
@@ -294,26 +321,24 @@ function renderDetail() {
           <div class="mono">${escapeHtml(updatedAtText)}</div>
         </div>
       </div>
-      <div class="detail__actions">
-        <button class="button button--ghost" id="editBtn">编辑</button>
-        <button class="button button--ghost" id="copyBtn">复制</button>
-        <button class="button button--ghost" id="quantityBtn">调整数量</button>
-        <button class="button button--danger" id="detailDeleteBtn">删除</button>
-      </div>
     </div>
   `;
 
-  $('#editBtn')?.addEventListener('click', () => openForm(item));
-  $('#copyBtn')?.addEventListener('click', () => duplicateItem(item));
-  $('#quantityBtn')?.addEventListener('click', () => openQuantityDialog(item));
-  $('#detailDeleteBtn')?.addEventListener('click', () => deleteItem(item.id));
+  const editBtn = $('#editBtn');
+  const copyBtn = $('#copyBtn');
+  const quantityBtn = $('#quantityBtn');
+  const deleteBtn = $('#detailDeleteBtn');
+
+  editBtn?.addEventListener('click', () => openForm(item));
+  copyBtn?.addEventListener('click', () => duplicateItem(item));
+  quantityBtn?.addEventListener('click', () => openQuantityDialog(item));
+  deleteBtn?.addEventListener('click', () => deleteItem(item.id));
 }
 
 function selectItem(id) {
   state.selectedId = id;
   renderAdminList();
-  const item = state.items.find((entry) => entry.id === id) || null;
-  if (item) openForm(item);
+  renderDetail();
 }
 
 function upsertItem(payload) {
@@ -669,30 +694,21 @@ async function syncToGist() {
 
 function setSyncLoading(loading) {
   const syncBtn = $('#adminSyncToBtn');
-  syncBtn.disabled = loading;
-  syncBtn.textContent = loading ? '同步中...' : '上传到 Gist';
-
   const restoreBtn = $('#adminSyncFromBtn');
-  restoreBtn.disabled = loading;
-  restoreBtn.textContent = loading ? '恢复中...' : '从 Gist 恢复';
+  if (syncBtn) {
+    syncBtn.disabled = loading;
+    syncBtn.textContent = loading ? '同步中...' : '上传到 Gist';
+  }
+  if (restoreBtn) {
+    restoreBtn.disabled = loading;
+    restoreBtn.textContent = loading ? '恢复中...' : '从 Gist 恢复';
+  }
 }
 
 function initAdminLayout() {
-  const sidebar = $('#adminSidebar');
+  const adminBody = $('#adminBody');
   const logoutBtn = $('#adminLogoutBtn');
   const isLoggedIn = authIsLoggedIn();
-
-  function applyAdminPanelVisibility() {
-    sidebar?.classList.remove('hidden');
-    logoutBtn?.classList.remove('hidden');
-    document.getElementById('adminLoginPanel')?.classList.add('hidden');
-  }
-
-  function applyLoginVisibility() {
-    sidebar?.classList.add('hidden');
-    logoutBtn?.classList.add('hidden');
-    document.getElementById('adminLoginPanel')?.classList.remove('hidden');
-  }
 
   if (isLoggedIn) {
     applyAdminPanelVisibility();
@@ -706,7 +722,7 @@ function initAdminLayout() {
     }
   }
 
-  const tabBtns = sidebar?.querySelectorAll('.admin-tab-btn');
+  const tabBtns = adminBody?.querySelectorAll('.nav-item');
   tabBtns?.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tabId = btn.getAttribute('data-tab');
@@ -718,6 +734,7 @@ function initAdminLayout() {
 
   logoutBtn?.addEventListener('click', () => {
     authLogout();
+    state.selectedId = null;
     applyLoginVisibility();
     showToast('已退出管理后台');
   });
@@ -731,27 +748,47 @@ function init() {
   renderDetail();
   updateSyncStatus();
 
-  $('#adminNewBtn').addEventListener('click', () => openForm());
-  $('#closeFormBtn').addEventListener('click', closeForm);
-  $('#cancelFormBtn').addEventListener('click', closeForm);
-  $('#componentForm').addEventListener('submit', submitForm);
+  $('#adminSearch')?.addEventListener('input', (event) => {
+    state.filterText = event.target.value;
+    renderAdminList();
+  });
 
-  $('#formDialog').addEventListener('click', (event) => {
+  $('#filterCategory')?.addEventListener('change', (event) => {
+    state.filterCategory = event.target.value;
+    renderAdminList();
+  });
+
+  $('#filterPackage')?.addEventListener('change', (event) => {
+    state.filterPackage = event.target.value;
+    renderAdminList();
+  });
+
+  $('#filterStock')?.addEventListener('change', (event) => {
+    state.filterStock = event.target.value;
+    renderAdminList();
+  });
+
+  $('#adminNewBtn')?.addEventListener('click', () => openForm());
+  $('#closeFormBtn')?.addEventListener('click', closeForm);
+  $('#cancelFormBtn')?.addEventListener('click', closeForm);
+  $('#componentForm')?.addEventListener('submit', submitForm);
+
+  $('#formDialog')?.addEventListener('click', (event) => {
     if (event.target === $('#formDialog')) closeForm();
   });
 
-  $('#quantityDialog').addEventListener('click', (event) => {
+  $('#quantityDialog')?.addEventListener('click', (event) => {
     if (event.target === $('#quantityDialog')) closeQuantityDialog();
   });
-  $('#closeQuantityBtn').addEventListener('click', closeQuantityDialog);
-  $('#cancelQuantityBtn').addEventListener('click', closeQuantityDialog);
-  $('#quantityForm').addEventListener('submit', submitQuantity);
+  $('#closeQuantityBtn')?.addEventListener('click', closeQuantityDialog);
+  $('#cancelQuantityBtn')?.addEventListener('click', closeQuantityDialog);
+  $('#quantityForm')?.addEventListener('submit', submitQuantity);
 
-  $('#adminLoginForm').addEventListener('submit', (event) => {
+  $('#adminLoginForm')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const password = $('#adminLoginPassword').value || '';
     if (authLogin(password)) {
-      $('#adminLoginPanel').classList.add('hidden');
+      applyAdminPanelVisibility();
       showAdminPanel('components');
       showToast('已进入管理后台');
     } else {
@@ -759,7 +796,7 @@ function init() {
     }
   });
 
-  $('#adminSettingsForm').addEventListener('submit', (event) => {
+  $('#adminSettingsForm')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const token = $('#adminGithubToken').value.trim();
     const gistUrl = $('#adminGistUrl').value.trim();
@@ -772,19 +809,19 @@ function init() {
     showAdminPanel('settings');
   });
 
-  $('#adminSettingsResetBtn').addEventListener('click', () => {
+  $('#adminSettingsResetBtn')?.addEventListener('click', () => {
     $('#adminGithubToken').value = '';
     $('#adminGistUrl').value = '';
     $('#adminPassword').value = '';
     $('#lowStockThreshold').value = '5';
   });
 
-  $('#inventoryCheckAll').addEventListener('change', (event) => {
+  $('#inventoryCheckAll')?.addEventListener('change', (event) => {
     const checked = event.target.checked;
     $$('.inventory-check').forEach((node) => (node.checked = checked));
   });
 
-  $('#batchDeleteBtn').addEventListener('click', () => {
+  $('#batchDeleteBtn')?.addEventListener('click', () => {
     const ids = getSelectedInventoryIds();
     if (!ids.length) {
       showToast('请先选择要删除的条目', { duration: 2400 });
@@ -802,7 +839,7 @@ function init() {
     showToast('已批量删除');
   });
 
-  $('#batchClearBtn').addEventListener('click', () => {
+  $('#batchClearBtn')?.addEventListener('click', () => {
     const ids = getSelectedInventoryIds();
     if (!ids.length) {
       showToast('请先选择要清空的条目', { duration: 2400 });
@@ -825,15 +862,15 @@ function init() {
     showToast('已批量清空');
   });
 
-  $('#adminExportBtn').addEventListener('click', exportJson);
-  $('#adminImportBtn').addEventListener('click', () => $('#adminImportFile').click());
-  $('#adminImportFile').addEventListener('change', (event) => {
+  $('#adminExportBtn')?.addEventListener('click', exportJson);
+  $('#adminImportBtn')?.addEventListener('click', () => $('#adminImportFile').click());
+  $('#adminImportFile')?.addEventListener('change', (event) => {
     const file = event.target.files[0];
     if (file) importJson(file);
     event.target.value = '';
   });
-  $('#adminSyncToBtn').addEventListener('click', syncToGist);
-  $('#adminSyncFromBtn').addEventListener('click', syncFromGist);
+  $('#adminSyncToBtn')?.addEventListener('click', syncToGist);
+  $('#adminSyncFromBtn')?.addEventListener('click', syncFromGist);
 
   initAdminLayout();
   if (authIsLoggedIn()) {

@@ -64,8 +64,16 @@ function refreshFilters() {
   const categorySelect = $('#filterCategory');
   const packageSelect = $('#filterPackage');
 
-  categorySelect.innerHTML = '<option value="">全部</option>' + categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
-  packageSelect.innerHTML = '<option value="">全部</option>' + packages.map((pkg) => `<option value="${escapeHtml(pkg)}">${escapeHtml(pkg)}</option>`).join('');
+  categorySelect.innerHTML =
+    '<option value="">全部</option>' +
+    categories
+      .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+      .join('');
+  packageSelect.innerHTML =
+    '<option value="">全部</option>' +
+    packages
+      .map((pkg) => `<option value="${escapeHtml(pkg)}">${escapeHtml(pkg)}</option>`)
+      .join('');
 
   state.filterCategory = categorySelect.value;
   state.filterPackage = packageSelect.value;
@@ -80,31 +88,35 @@ function renderList() {
 
   if (!filtered.length) {
     listEl.innerHTML = '';
-    emptyEl.hidden = false;
+    listEl.classList.add('hidden');
+    emptyEl.classList.remove('hidden');
     return;
   }
 
-  emptyEl.hidden = true;
+  listEl.classList.remove('hidden');
+  emptyEl.classList.add('hidden');
   listEl.innerHTML = filtered
     .map((item) => {
-      const statusClass = item.quantity <= 0 ? 'is-out' : item.quantity <= 5 ? 'is-low' : '';
       const activeClass = item.id === state.selectedId ? 'is-active' : '';
+      const quantityBadgeClass = item.quantity <= 0 ? 'badge--danger' : 'badge--accent';
       return `
-        <button type="button" class="list__item ${activeClass} ${statusClass}" data-id="${escapeHtml(item.id)}">
-          <span class="list__primary">
-            <span class="list__name">${escapeHtml(item.name || '未命名')}</span>
-            <span class="list__meta">${escapeHtml([item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息')}</span>
+        <button type="button" class="data-row ${activeClass}" data-id="${escapeHtml(item.id)}">
+          <span class="data-row__primary">
+            <span class="data-row__name truncate">${escapeHtml(item.name || '未命名')}</span>
+            <span class="data-row__meta truncate">${escapeHtml(
+              [item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息'
+            )}</span>
           </span>
-          <span class="list__badges">
+          <span class="data-row__badges">
             <span class="badge badge--accent">${escapeHtml(item.category || '未分类')}</span>
-            <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--muted'}">${coerceQuantity(item.quantity)}</span>
+            <span class="badge ${quantityBadgeClass}">${coerceQuantity(item.quantity)}</span>
           </span>
         </button>
       `;
     })
     .join('');
 
-  $$('.list__item').forEach((node) => {
+  $$('.data-row').forEach((node) => {
     node.addEventListener('click', () => selectItem(node.dataset.id));
   });
 }
@@ -115,11 +127,11 @@ function renderDetail() {
   const detailEl = $('#detail');
 
   if (!item) {
-    titleEl.textContent = '选择一个元器件查看详情';
+    titleEl.textContent = '详情';
     detailEl.innerHTML = `
-      <div class="empty">
-        <div class="empty__title">未选择条目</div>
-        <div class="empty__desc">从左侧列表选择一个元器件，即可查看详情。</div>
+      <div class="empty-state">
+        <div class="empty-state__title">未选择条目</div>
+        <div class="empty-state__desc">从左侧列表选择一个元器件，即可查看详情。</div>
       </div>
     `;
     return;
@@ -134,50 +146,48 @@ function renderDetail() {
     : `<span class="text-muted">暂无</span>`;
 
   detailEl.innerHTML = `
-    <div>
-      <div class="detail__section">
-        <div class="field">
-          <div class="field__label">名称</div>
-          <div class="mono">${escapeHtml(item.name || '-')}</div>
+    <div class="detail__section">
+      <div class="field">
+        <div class="field__label">名称</div>
+        <div class="mono">${escapeHtml(item.name || '-')}</div>
+      </div>
+      <div class="field">
+        <div class="field__label">种类</div>
+        <div class="mono">${escapeHtml(item.category || '-')}</div>
+      </div>
+      <div class="field">
+        <div class="field__label">型号</div>
+        <div class="mono">${escapeHtml(item.model || '-')}</div>
+      </div>
+      <div class="field">
+        <div class="field__label">封装</div>
+        <div class="mono">${escapeHtml(item.package || '-')}</div>
+      </div>
+      <div class="field">
+        <div class="field__label">当前数量</div>
+        <div>
+          <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--accent'}">${coerceQuantity(item.quantity)}</span>
         </div>
-        <div class="field">
-          <div class="field__label">种类</div>
-          <div class="mono">${escapeHtml(item.category || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">型号</div>
-          <div class="mono">${escapeHtml(item.model || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">封装</div>
-          <div class="mono">${escapeHtml(item.package || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">当前数量</div>
-          <div>
-            <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--accent'}">${coerceQuantity(item.quantity)}</span>
-          </div>
-        </div>
-        <div class="field">
-          <div class="field__label">位置/库位</div>
-          <div class="mono">${escapeHtml(item.location || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">数据手册</div>
-          <div>${datasheetHtml}</div>
-        </div>
-        <div class="field field--full">
-          <div class="field__label">备注</div>
-          <div class="mono">${escapeHtml(item.notes || '-')}</div>
-        </div>
-        <div class="field field--full">
-          <div class="field__label">创建时间</div>
-          <div class="mono">${escapeHtml(createdAtText)}</div>
-        </div>
-        <div class="field field--full">
-          <div class="field__label">更新时间</div>
-          <div class="mono">${escapeHtml(updatedAtText)}</div>
-        </div>
+      </div>
+      <div class="field">
+        <div class="field__label">位置/库位</div>
+        <div class="mono">${escapeHtml(item.location || '-')}</div>
+      </div>
+      <div class="field">
+        <div class="field__label">数据手册</div>
+        <div>${datasheetHtml}</div>
+      </div>
+      <div class="field field--full">
+        <div class="field__label">备注</div>
+        <div class="mono">${escapeHtml(item.notes || '-')}</div>
+      </div>
+      <div class="field field--full">
+        <div class="field__label">创建时间</div>
+        <div class="mono">${escapeHtml(createdAtText)}</div>
+      </div>
+      <div class="field field--full">
+        <div class="field__label">更新时间</div>
+        <div class="mono">${escapeHtml(updatedAtText)}</div>
       </div>
     </div>
   `;
@@ -187,6 +197,15 @@ function selectItem(id) {
   state.selectedId = id;
   renderList();
   renderDetail();
+}
+
+function updateThemeIcon(theme) {
+  const sun = $('.theme-icon__sun');
+  const moon = $('.theme-icon__moon');
+  if (sun && moon) {
+    sun.classList.toggle('hidden', theme === 'dark');
+    moon.classList.toggle('hidden', theme !== 'dark');
+  }
 }
 
 function toggleTheme(nextTheme) {
@@ -200,6 +219,7 @@ function toggleTheme(nextTheme) {
     root.setAttribute('data-theme', 'light');
     root.classList.remove('dark');
   }
+  updateThemeIcon(theme);
   try {
     localStorage.setItem('theme', theme);
   } catch {
@@ -223,6 +243,8 @@ function initTheme() {
 
   if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
     toggleTheme('dark');
+  } else {
+    updateThemeIcon('light');
   }
 }
 

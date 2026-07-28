@@ -1,36 +1,171 @@
-﻿:root {
-  --header-height: 64px;
-  --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --border: #e5e7eb;
-  --border-strong: #d1d5db;
-  --text-strong: #0f172a;
-  --text: #334155;
-  --text-muted: #64748b;
-  --accent: #4f46e5;
-  --accent-soft: #eef2ff;
-  --danger: #b91c1c;
-  --danger-soft: #fef2f2;
-  --success: #15803d;
-  --success-soft: #f0fdf4;
-  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-  --radius: 12px;
-  --radius-sm: 10px;
+:root {
+  /* --------------------------------------------------------------------------
+     Industrial Workbench — CSS Variables
+     深色仪器面板 + 琥珀/橙色强调，明暗双主题。
+  -------------------------------------------------------------------------- */
+
+  /* Background layers ------------------------------------------------------- */
+  --surface-base: #d9dce2;
+  --surface-panel: #e8eaed;
+  --surface-elevated: #f3f4f6;
+  --surface-inset: #c9cdd4;
+  --surface-header: color-mix(in srgb, var(--surface-panel) 92%, transparent);
+
+  /* Text -------------------------------------------------------------------- */
+  --text-primary: #111317;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --text-inverse: #e8e9eb;
+
+  /* Borders ----------------------------------------------------------------- */
+  --border: #b8bcc4;
+  --border-strong: #9ca3af;
+  --border-divider: color-mix(in srgb, var(--border) 70%, transparent);
+
+  /* Accent — amber/orange LED ----------------------------------------------- */
+  --accent: #d97706;
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 25%, transparent);
+  --accent-text: #92400e;
+
+  /* Semantic ---------------------------------------------------------------- */
+  --danger: #dc2626;
+  --danger-soft: color-mix(in srgb, var(--danger) 10%, transparent);
+  --danger-glow: color-mix(in srgb, var(--danger) 25%, transparent);
+  --warning: #d97706;
+  --warning-soft: color-mix(in srgb, var(--warning) 10%, transparent);
+  --success: #16a34a;
+  --success-soft: color-mix(in srgb, var(--success) 10%, transparent);
+
+  /* Stock status ------------------------------------------------------------ */
+  --in-stock: #16a34a;
+  --in-stock-soft: color-mix(in srgb, var(--in-stock) 10%, transparent);
+  --low-stock: #d97706;
+  --low-stock-soft: color-mix(in srgb, var(--low-stock) 10%, transparent);
+  --out-of-stock: #dc2626;
+  --out-of-stock-soft: color-mix(in srgb, var(--out-of-stock) 10%, transparent);
+
+  /* Typography -------------------------------------------------------------- */
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', 'SF Mono', 'Fira Code', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  --font-sans: 'Noto Sans SC', 'IBM Plex Sans', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-data: var(--font-mono);
+  --font-label: var(--font-sans);
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+
+  --leading-tight: 1.25;
+  --leading-base: 1.45;
+  --leading-relaxed: 1.6;
+
+  /* 4px grid spacing -------------------------------------------------------- */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Hard, utilitarian radius ------------------------------------------------ */
+  --radius-sm: 2px;
+  --radius: 3px;
+  --radius-md: 4px;
+  --radius-full: 999px;
+
+  /* Shadows — inset panels + subtle float ----------------------------------- */
+  --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.18);
+  --shadow-inset-strong: inset 0 2px 6px rgba(0, 0, 0, 0.22);
+  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.35) inset,
+                  0 1px 2px rgba(0, 0, 0, 0.12),
+                  0 4px 12px rgba(0, 0, 0, 0.10);
+  --shadow-float: 0 2px 0 rgba(255, 255, 255, 0.18) inset,
+                  0 4px 16px rgba(0, 0, 0, 0.22);
+  --shadow-glow-accent: 0 0 8px var(--accent-glow);
+  --shadow-glow-danger: 0 0 8px var(--danger-glow);
+
+  /* Layout ------------------------------------------------------------------ */
+  --header-height: 56px;
+  --sidebar-width: 180px;
+  --topbar-sticky-offset: 8px;
+  --panel-border: 1px solid var(--border);
+
+  /* Transitions ------------------------------------------------------------- */
+  --transition-fast: 120ms ease;
+  --transition-base: 180ms ease;
+  --transition-slow: 260ms ease;
+
+  /* Z-index scale ----------------------------------------------------------- */
+  --z-base: 1;
+  --z-sticky: 50;
+  --z-dropdown: 100;
+  --z-overlay: 200;
+  --z-toast: 1000;
+
+  /* Misc -------------------------------------------------------------------- */
+  --focus-ring: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent-glow);
+  --tick-color: color-mix(in srgb, var(--border-strong) 60%, transparent);
 }
 
 [data-theme="dark"] {
-  --surface: #0f172a;
-  --surface-muted: #111c38;
-  --border: #1f2a45;
-  --border-strong: #334155;
-  --text-strong: #e2e8f0;
-  --text: #cbd5e1;
-  --text-muted: #94a3b8;
-  --accent: #818cf8;
-  --accent-soft: #1e1b4b;
-  --danger: #fca5a5;
-  --danger-soft: #2a1010;
-  --success: #86efac;
-  --success-soft: #052e16;
-  --shadow: 0 18px 45px rgba(2, 6, 23, 0.35);
+  /* Background layers ------------------------------------------------------- */
+  --surface-base: #0b0c0e;
+  --surface-panel: #141619;
+  --surface-elevated: #1c1f24;
+  --surface-inset: #08090a;
+  --surface-header: color-mix(in srgb, var(--surface-panel) 92%, transparent);
+
+  /* Text -------------------------------------------------------------------- */
+  --text-primary: #e8e9eb;
+  --text-secondary: #a8adb5;
+  --text-muted: #6b7280;
+  --text-inverse: #111317;
+
+  /* Borders ----------------------------------------------------------------- */
+  --border: #2a2e35;
+  --border-strong: #3d434d;
+  --border-divider: color-mix(in srgb, var(--border) 70%, transparent);
+
+  /* Accent — amber/orange LED ----------------------------------------------- */
+  --accent: #f59e0b;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 35%, transparent);
+  --accent-text: #fbbf24;
+
+  /* Semantic ---------------------------------------------------------------- */
+  --danger: #ef4444;
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, transparent);
+  --danger-glow: color-mix(in srgb, var(--danger) 35%, transparent);
+  --warning: #f59e0b;
+  --warning-soft: color-mix(in srgb, var(--warning) 12%, transparent);
+  --success: #22c55e;
+  --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
+
+  /* Stock status ------------------------------------------------------------ */
+  --in-stock: #22c55e;
+  --in-stock-soft: color-mix(in srgb, var(--in-stock) 12%, transparent);
+  --low-stock: #f59e0b;
+  --low-stock-soft: color-mix(in srgb, var(--low-stock) 12%, transparent);
+  --out-of-stock: #ef4444;
+  --out-of-stock-soft: color-mix(in srgb, var(--out-of-stock) 12%, transparent);
+
+  /* Shadows — inset panels + subtle float ----------------------------------- */
+  --shadow-inset: inset 0 1px 4px rgba(0, 0, 0, 0.55);
+  --shadow-inset-strong: inset 0 2px 8px rgba(0, 0, 0, 0.65);
+  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                  0 1px 2px rgba(0, 0, 0, 0.35),
+                  0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-float: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                  0 8px 28px rgba(0, 0, 0, 0.45);
+  --shadow-glow-accent: 0 0 10px var(--accent-glow);
+  --shadow-glow-danger: 0 0 10px var(--danger-glow);
+
+  --focus-ring: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent-glow);
+  --tick-color: color-mix(in srgb, var(--border-strong) 50%, transparent);
 }
