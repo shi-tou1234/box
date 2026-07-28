@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'solder_pm.components.v1';
 const SETTINGS_KEY = 'solder_pm.settings.v1';
+const AUTH_KEY = 'solder_pm.auth.v1';
 
 const emptyState = {
   id: null,
@@ -25,7 +26,11 @@ const state = {
   filterCategory: '',
   filterPackage: '',
   filterStock: 'all',
+  sortKey: 'updatedAt',
+  sortDirection: 'desc',
+  adminSelectedId: null,
   syncLoading: false,
+  currentView: 'query',
 };
 
 const storage = {
@@ -54,16 +59,60 @@ const settings = {
   read() {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
-      if (!raw) return { token: '', gistUrl: '' };
+      if (!raw) return { token: '', gistUrl: '', lowStockThreshold: 5 };
       const data = JSON.parse(raw);
-      return { token: String(data.token || ''), gistUrl: String(data.gistUrl || '') };
+      return {
+        token: String(data.token || ''),
+        gistUrl: String(data.gistUrl || ''),
+        lowStockThreshold: Number(data.lowStockThreshold),
+      };
     } catch (error) {
       console.error('读取设置失败', error);
-      return { token: '', gistUrl: '' };
-  }
+      return { token: '', gistUrl: '', lowStockThreshold: 5 };
+    }
   },
   write(value) {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(value));
+  },
+};
+
+const auth = {
+  readPassword() {
+    try {
+      const raw = localStorage.getItem(AUTH_KEY);
+      if (!raw) return '';
+      const data = JSON.parse(raw);
+      return String(data.password || '');
+    } catch (error) {
+      console.error('读取认证信息失败', error);
+      return '';
+    }
+  },
+  writePassword(password) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ password }));
+  },
+  clear() {
+    localStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem('solder_pm.admin_ok');
+  },
+  isLoggedIn() {
+    return sessionStorage.getItem('solder_pm.admin_ok') === '1';
+  },
+  login(password) {
+    const stored = this.readPassword();
+    if (!stored) {
+      this.writePassword(password);
+      sessionStorage.setItem('solder_pm.admin_ok', '1');
+      return true;
+    }
+    if (stored === password) {
+      sessionStorage.setItem('solder_pm.admin_ok', '1');
+      return true;
+    }
+    return false;
+  },
+  logout() {
+    this.clear();
   },
 };
 
@@ -119,13 +168,31 @@ function summarizeChanges(base, target) {
   };
 }
 
+function getSortedItems(items = state.items) {
+  const sorted = items.slice();
+  sorted.sort((a, b) => {
+    const quantityA = coerceQuantity(a.quantity);
+    const quantityB = coerceQuantity(b.quantity);
+    if (state.sortKey === 'name') {
+      return state.sortDirection === 'asc' ? a.name.localeCompare(b.name, 'zh') : b.name.localeCompare(a.name, 'zh');
+    }
+    if (state.sortKey === 'quantity') {
+      return state.sortDirection === 'asc' ? quantityA - quantityB : quantityB - quantityA;
+    }
+    const timeA = a.updatedAt || a.createdAt || '';
+    const timeB = b.updatedAt || b.createdAt || '';
+    return state.sortDirection === 'asc' ? timeA.localeCompare(timeB) : timeB.localeCompare(timeA);
+  });
+  return sorted;
+}
+
 function getFilteredItems() {
   const text = state.filterText.trim().toLowerCase();
   const category = state.filterCategory.trim();
   const pkg = state.filterPackage.trim();
   const stockMode = state.filterStock;
 
-  return state.items.filter((item) => {
+  return getSortedItems(state.items).filter((item) => {
     const matchText =
       !text ||
       (item.name || '').toLowerCase().includes(text) ||
@@ -157,6 +224,22 @@ function refreshFilters() {
 
   state.filterCategory = categorySelect.value;
   state.filterPackage = packageSelect.value;
+}
+
+function renderCategoryDatalist() {
+  const datalist = $('#categoryOptions');
+  if (!datalist) return;
+  const options = Array.from(new Set(getCategoryOptions().concat(getUniqueValues('category')))).sort((a, b) => a.localeCompare(b, 'zh'));
+  datalist.innerHTML = options.map((option) => `<option value=\"${escapeHtml(option)}\"></option>`).join('');
+}
+
+function renderPackageDatalist(category = '') {
+  const datalist = $('#packageOptions');
+  if (!datalist) return;
+  const suggestions = getPackageSuggestions(category);
+  const used = state.items.filter((item) => resolveCategoryKey(item.category) === resolveCategoryKey(category)).map((item) => (item.package || '').trim()).filter(Boolean);
+  const options = Array.from(new Set(suggestions.concat(used))).sort((a, b) => a.localeCompare(b, 'zh'));
+  datalist.innerHTML = options.map((option) => `<option value=\"${escapeHtml(option)}\"></option>`).join('');
 }
 
 function renderList() {
@@ -197,6 +280,163 @@ function renderList() {
   });
 }
 
+function renderAdminList() {
+  const listEl = $('#adminComponentList');
+  const emptyEl = $('#adminListEmpty');
+  const items = getSortedItems(state.items);
+
+  if (!items.length) {
+    listEl.innerHTML = '';
+    emptyEl.hidden = false;
+    return;
+  }
+
+  emptyEl.hidden = true;
+  listEl.innerHTML = items
+    .map((item) => {
+      const activeClass = item.id === state.adminSelectedId ? 'is-active' : '';
+      return `
+        <div class="list__item ${activeClass}" data-id="${escapeHtml(item.id)}">
+          <div class="list__primary">
+            <div class="list__name">${escapeHtml(item.name || '未命名')}</div>
+            <div class="list__meta">${escapeHtml([item.category, item.model, item.package, item.location].filter(Boolean).join(' · ') || '未填写完整信息')}</div>
+          </div>
+          <div class="list__badges">
+            <span class="badge badge--accent">${escapeHtml(item.category || '未分类')}</span>
+            <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--muted'}">${coerceQuantity(item.quantity)}</span>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  $$('#adminComponentList .list__item').forEach((node) => {
+    node.addEventListener('click', () => {
+      state.adminSelectedId = node.dataset.id;
+      renderAdminList();
+      openForm(state.items.find((entry) => entry.id === node.dataset.id) || null);
+    });
+  });
+}
+
+function renderInventory() {
+  const tbody = $('#inventoryBody');
+  const emptyEl = $('#inventoryEmpty');
+  const threshold = Number(settings.read().lowStockThreshold);
+  const items = state.items.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh'));
+
+  $('#inventoryCheckAll').checked = false;
+
+  if (!items.length) {
+    tbody.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+
+  emptyEl.classList.add('hidden');
+  tbody.innerHTML = items
+    .map((item) => {
+      const quantity = coerceQuantity(item.quantity);
+      const isLow = quantity <= threshold;
+      const statusText = quantity <= 0 ? '缺货' : isLow ? '低库存' : '正常';
+      const statusClass = quantity <= 0 ? 'text-danger' : isLow ? 'text-danger' : 'text-muted';
+      return `
+        <tr>
+          <td><input type="checkbox" class="inventory-check" value="${escapeHtml(item.id)}" /></td>
+          <td>${escapeHtml(item.name || '-')}</td>
+          <td>${escapeHtml(item.category || '-')}</td>
+          <td>${escapeHtml(item.model || '-')}</td>
+          <td>${escapeHtml(item.package || '-')}</td>
+          <td>${quantity}</td>
+          <td>${escapeHtml(item.location || '-')}</td>
+          <td class="${statusClass}">${statusText}</td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function getSelectedInventoryIds() {
+  return Array.from($$('.inventory-check:checked')).map((node) => node.value);
+}
+
+function updateSyncStatus() {
+  const current = settings.read();
+  const text = $('#syncStatusText');
+  if (!text) return;
+  text.textContent = current.gistUrl ? `已配置 Gist：${current.gistUrl}` : '未配置 Gist 地址。';
+}
+
+function showView(view) {
+  state.currentView = view;
+  const queryView = $('#queryView');
+  const adminView = $('#adminView');
+  const queryNewBtn = $('#queryNewBtn');
+  const headerActions = $('#headerActions');
+  if (view === 'admin') {
+    queryView.hidden = true;
+    adminView.hidden = false;
+    queryNewBtn.hidden = true;
+    headerActions.hidden = true;
+    renderAdminList();
+    updateSyncStatus();
+  } else {
+    queryView.hidden = false;
+    adminView.hidden = true;
+    queryNewBtn.hidden = !state.items.length;
+    headerActions.hidden = false;
+    renderList();
+  }
+}
+
+function navigateToAdmin() {
+  if (!auth.isLoggedIn()) {
+    $('#adminLoginPassword').value = '';
+    $('#adminLoginPanel').classList.remove('hidden');
+    switchAdminTab('login');
+    showToast('请先输入管理密码');
+    return;
+  }
+  $('#adminLoginPanel').classList.add('hidden');
+  switchAdminTab('components');
+  showView('admin');
+}
+
+function navigateToQuery() {
+  showView('query');
+  window.location.hash = '#/';
+}
+
+function switchAdminTab(tabId) {
+  const buttons = $$('#adminSidebar .admin-tab-btn');
+  const panels = $$('.admin-panel');
+  buttons.forEach((btn) => {
+    const selected = btn.getAttribute('data-tab') === tabId;
+    btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+  });
+  panels.forEach((panel) => {
+    const panelId = panel.getAttribute('data-panel');
+    if (panelId === tabId) {
+      panel.classList.remove('hidden');
+    } else {
+      panel.classList.add('hidden');
+    }
+  });
+  if (tabId === 'inventory') {
+    renderInventory();
+  }
+  if (tabId === 'sync') {
+    updateSyncStatus();
+  }
+  if (tabId === 'settings') {
+    const current = settings.read();
+    $('#adminGithubToken').value = current.token;
+    $('#adminGistUrl').value = current.gistUrl;
+    $('#adminPassword').value = auth.readPassword();
+    $('#lowStockThreshold').value = current.lowStockThreshold;
+  }
+}
+
 function renderDetail() {
   const item = state.items.find((entry) => entry.id === state.selectedId) || null;
   const titleEl = $('#detailTitle');
@@ -209,7 +449,7 @@ function renderDetail() {
     detailEl.innerHTML = `
       <div class="empty">
         <div class="empty__title">未选择条目</div>
-        <div class="empty__desc">点击列表中的元器件可编辑详情。</div>
+        <div class="empty__desc">点击列表中的元器件可查看详情。</div>
       </div>
     `;
     return;
@@ -304,11 +544,15 @@ function upsertItem(payload) {
 
   state.items = state.items.filter((item) => item.id !== next.id);
   state.items.push(next);
-  state.items.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   storage.write(state.items);
   refreshFilters();
   renderList();
-  selectItem(next.id);
+  renderCategoryDatalist();
+  if (state.currentView === 'query') {
+    selectItem(next.id);
+  } else {
+    renderAdminList();
+  }
 }
 
 function deleteItem(id) {
@@ -323,6 +567,7 @@ function deleteItem(id) {
   refreshFilters();
   renderList();
   renderDetail();
+  renderAdminList();
   showToast('已删除');
 }
 
@@ -381,6 +626,8 @@ function openForm(item = null) {
   const dialog = $('#formDialog');
   $('#formDialogTitle').textContent = item ? '编辑元器件' : '新增元器件';
   resetForm(item);
+  renderCategoryDatalist();
+  renderPackageDatalist(item ? item.category : '');
   dialog.showModal();
 }
 
@@ -440,8 +687,10 @@ function submitQuantity(event) {
 
   item.updatedAt = nowIso();
   storage.write(state.items);
+  refreshFilters();
   renderList();
   renderDetail();
+  renderAdminList();
   closeQuantityDialog();
   showToast('数量已更新');
 }
@@ -461,7 +710,7 @@ function submitSettings(event) {
   event.preventDefault();
   const token = $('#githubToken').value.trim();
   const gistUrl = $('#gistUrl').value.trim();
-  settings.write({ token, gistUrl });
+  settings.write({ ...settings.read(), token, gistUrl });
   closeSettings();
   showToast('设置已保存');
 }
@@ -544,10 +793,10 @@ async function syncFromGist() {
   state.syncLoading = true;
   setSyncLoading(true);
 
-  const currentSettings = settings.read();
-  const gistUrl = normalizeGistUrl(currentSettings.gistUrl || '');
-
   try {
+    const currentSettings = settings.read();
+    const gistUrl = normalizeGistUrl(currentSettings.gistUrl || '');
+
     if (!gistUrl) {
       showToast('请先在设置中填写已有 Gist 地址', { duration: 2400 });
       return;
@@ -568,6 +817,7 @@ async function syncFromGist() {
     refreshFilters();
     renderList();
     selectItem(state.selectedId);
+    renderAdminList();
     showToast('已从 Gist 恢复');
   } catch (error) {
     console.error(error);
@@ -663,6 +913,7 @@ function importJson(file) {
       refreshFilters();
       renderList();
       selectItem(state.selectedId);
+      renderAdminList();
       showToast('导入成功');
     } catch (error) {
       console.error(error);
@@ -675,15 +926,34 @@ function importJson(file) {
 function init() {
   state.items = storage.read();
   refreshFilters();
+  renderCategoryDatalist();
   renderList();
   renderDetail();
+  updateSyncStatus();
 
   $('#newBtn').addEventListener('click', () => openForm());
+  $('#queryNewBtn').addEventListener('click', () => openForm());
   $('#settingsBtn').addEventListener('click', openSettings);
   $('#syncBtn').addEventListener('click', syncToGist);
   $('#exportBtn').addEventListener('click', exportJson);
   $('#importBtn').addEventListener('click', () => $('#importFile').click());
+  $('#openAdminBtn').addEventListener('click', navigateToAdmin);
+  $('#adminOpenQueryBtn').addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateToQuery();
+  });
+  $('#adminLogoutBtn').addEventListener('click', () => {
+    auth.logout();
+    navigateToQuery();
+    showToast('已退出管理');
+  });
   $('#importFile').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) importJson(file);
+    event.target.value = '';
+  });
+  $('#adminImportBtn').addEventListener('click', () => $('#adminImportFile').click());
+  $('#adminImportFile').addEventListener('change', (event) => {
     const file = event.target.files[0];
     if (file) importJson(file);
     event.target.value = '';
@@ -696,6 +966,7 @@ function init() {
   $('#filterCategory').addEventListener('change', (event) => {
     state.filterCategory = event.target.value;
     renderList();
+    renderPackageDatalist(state.filterCategory);
   });
   $('#filterPackage').addEventListener('change', (event) => {
     state.filterPackage = event.target.value;
@@ -705,6 +976,9 @@ function init() {
     state.filterStock = event.target.value;
     renderList();
   });
+  $('#filterCategory').addEventListener('input', () => {
+    renderPackageDatalist($('#filterCategory').value);
+  });
 
   $('#saveBtn').addEventListener('click', () => {
     const item = state.items.find((entry) => entry.id === state.selectedId);
@@ -713,6 +987,8 @@ function init() {
   $('#deleteBtn').addEventListener('click', () => {
     if (state.selectedId) deleteItem(state.selectedId);
   });
+
+  $('#adminNewBtn').addEventListener('click', () => openForm());
 
   $('#formDialog').addEventListener('click', (event) => {
     if (event.target === $('#formDialog')) closeForm();
@@ -734,6 +1010,109 @@ function init() {
   $('#closeSettingsBtn').addEventListener('click', closeSettings);
   $('#cancelSettingsBtn').addEventListener('click', closeSettings);
   $('#settingsForm').addEventListener('submit', submitSettings);
+
+  $('#adminLoginForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const password = $('#adminLoginPassword').value || '';
+    if (auth.login(password)) {
+      $('#adminLoginPanel').classList.add('hidden');
+      switchAdminTab('components');
+      showView('admin');
+      showToast('已进入管理模式');
+    } else {
+      showToast('密码错误', { duration: 2400 });
+    }
+  });
+
+  $('#adminSidebar').addEventListener('click', (event) => {
+    const button = event.target.closest('.admin-tab-btn');
+    if (!button) return;
+    const tabId = button.getAttribute('data-tab');
+    if (tabId) switchAdminTab(tabId);
+  });
+
+  $('#adminSettingsForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const token = $('#adminGithubToken').value.trim();
+    const gistUrl = $('#adminGistUrl').value.trim();
+    const password = $('#adminPassword').value || '';
+    const lowStockThreshold = Number($('#lowStockThreshold').value);
+    const current = settings.read();
+    settings.write({ ...current, token, gistUrl, lowStockThreshold: Number.isFinite(lowStockThreshold) ? Math.max(0, lowStockThreshold) : 5 });
+    if (password) auth.writePassword(password);
+    showToast('设置已保存');
+    switchAdminTab('settings');
+  });
+
+  $('#adminSettingsResetBtn').addEventListener('click', () => {
+    $('#adminGithubToken').value = '';
+    $('#adminGistUrl').value = '';
+    $('#adminPassword').value = '';
+    $('#lowStockThreshold').value = '5';
+  });
+
+  $('#batchDeleteBtn').addEventListener('click', () => {
+    const ids = getSelectedInventoryIds();
+    if (!ids.length) {
+      showToast('请先选择要删除的条目', { duration: 2400 });
+      return;
+    }
+    if (!confirm(`将删除 ${ids.length} 条库存记录，是否继续？`)) {
+      return;
+    }
+    state.items = state.items.filter((item) => !ids.includes(item.id));
+    storage.write(state.items);
+    refreshFilters();
+    renderList();
+    renderDetail();
+    renderAdminList();
+    renderInventory();
+    showToast('已批量删除');
+  });
+
+  $('#batchClearBtn').addEventListener('click', () => {
+    const ids = getSelectedInventoryIds();
+    if (!ids.length) {
+      showToast('请先选择要清零的条目', { duration: 2400 });
+      return;
+    }
+    if (!confirm(`将清零 ${ids.length} 条库存记录的数量，是否继续？`)) {
+      return;
+    }
+    state.items.forEach((item) => {
+      if (ids.includes(item.id)) {
+        item.quantity = 0;
+        item.updatedAt = nowIso();
+      }
+    });
+    storage.write(state.items);
+    refreshFilters();
+    renderList();
+    renderDetail();
+    renderAdminList();
+    renderInventory();
+    showToast('已批量清零');
+  });
+
+  $('#inventoryCheckAll').addEventListener('change', (event) => {
+    const checked = event.target.checked;
+    $$('.inventory-check').forEach((node) => (node.checked = checked));
+  });
+
+  $('#adminExportBtn').addEventListener('click', exportJson);
+  $('#adminImportBtn').addEventListener('click', () => $('#adminImportFile').click());
+  $('#adminSyncToBtn').addEventListener('click', syncToGist);
+  $('#adminSyncFromBtn').addEventListener('click', syncFromGist);
+
+  showView('query');
+
+  window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#/admin') {
+      navigateToAdmin();
+    } else {
+      navigateToQuery();
+    }
+  });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
