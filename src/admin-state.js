@@ -24,6 +24,15 @@ import {
   resolveCategoryKey,
 } from '../src/shared.js';
 
+export {
+  authReadPassword,
+  authWritePassword,
+  authIsLoggedIn,
+  authLogin,
+  authLogout,
+  authClear,
+} from '../src/shared.js';
+
 export const state = {
   items: [],
   selectedId: null,
