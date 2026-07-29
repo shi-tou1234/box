@@ -38,10 +38,18 @@ function showToast(message, options = {}) {
   item.textContent = message;
   container.appendChild(item);
 
-  setTimeout(() => {
+  const dismiss = () => {
     item.classList.add('toast--leave');
     item.addEventListener('animationend', () => item.remove(), { once: true });
-  }, duration);
+  };
+
+  if (options.persistent !== true) {
+    setTimeout(dismiss, duration);
+  }
+
+  item.addEventListener('click', () => {
+    if (!item.classList.contains('toast--leave')) dismiss();
+  });
 }
 
 function getFilteredItems() {
