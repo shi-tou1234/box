@@ -80,20 +80,94 @@ export function settingsWrite(value) {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(value));
 }
 
+/* ── 认证系统：PBKDF2-SHA256 ──────────────────────────────
+ * 参考 blog 项目方案，使用 Web Crypto API 实现密码哈希。
+ * 密码以 {salt, hash} 格式存储在 localStorage，永不存储明文。
+ * 登录态由 sessionStorage 管理，关闭标签页自动登出。
+ */
+
+const PBKDF2_ITERATIONS = 600000;
+
+function _toBase64(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function _fromBase64(str) {
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function _hashPassword(password, salt) {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt,
+      iterations: PBKDF2_ITERATIONS,
+    },
+    keyMaterial,
+    256,
+  );
+  return new Uint8Array(bits);
+}
+
+function _constantTimeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a[i] ^ b[i];
+  }
+  return result === 0;
+}
+
+/**
+ * 读取存储的密码哈希数据。
+ * @returns {{ salt: string, hash: string } | null}
+ */
 export function authReadPassword() {
   try {
     const raw = localStorage.getItem(AUTH_KEY);
-    if (!raw) return '';
+    if (!raw) return null;
     const data = JSON.parse(raw);
-    return String(data.password || '');
+    // 兼容旧格式 { password: 'xxx' } — 视作未设置
+    if (data && typeof data.password === 'string') return null;
+    if (data && data.salt && data.hash) {
+      return { salt: String(data.salt), hash: String(data.hash) };
+    }
+    return null;
   } catch (error) {
     console.error('读取认证密码失败', error);
-    return '';
+    return null;
   }
 }
 
-export function authWritePassword(password) {
-  localStorage.setItem(AUTH_KEY, JSON.stringify({ password }));
+/**
+ * 使用 PBKDF2-SHA256 哈希密码并存储。
+ * @param {string} password
+ */
+export async function authWritePassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await _hashPassword(password, salt);
+  localStorage.setItem(
+    AUTH_KEY,
+    JSON.stringify({ salt: _toBase64(salt), hash: _toBase64(hash) }),
+  );
 }
 
 export function authClear() {
@@ -105,14 +179,23 @@ export function authIsLoggedIn() {
   return sessionStorage.getItem('solder_pm.admin_ok') === '1';
 }
 
-export function authLogin(password) {
+/**
+ * 验证密码并登录。首次使用时自动设置密码。
+ * @param {string} password
+ * @returns {Promise<boolean>}
+ */
+export async function authLogin(password) {
   const stored = authReadPassword();
   if (!stored) {
-    authWritePassword(password);
+    // 首次设置密码
+    await authWritePassword(password);
     sessionStorage.setItem('solder_pm.admin_ok', '1');
     return true;
   }
-  if (stored === password) {
+  const salt = _fromBase64(stored.salt);
+  const storedHash = _fromBase64(stored.hash);
+  const inputHash = await _hashPassword(password, salt);
+  if (_constantTimeEqual(storedHash, inputHash)) {
     sessionStorage.setItem('solder_pm.admin_ok', '1');
     return true;
   }

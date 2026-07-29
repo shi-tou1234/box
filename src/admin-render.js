@@ -17,8 +17,6 @@ import {
   storageWrite,
   settingsRead,
   settingsWrite,
-  authReadPassword,
-  authLogin,
   coerceQuantity,
   generateId,
   nowIso,

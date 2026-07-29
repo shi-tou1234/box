@@ -10,8 +10,6 @@ import {
   settingsRead,
   storageRead,
   storageWrite,
-  authReadPassword,
-  authLogin,
   escapeHtml,
 } from '../src/shared.js';
 

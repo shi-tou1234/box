@@ -45,12 +45,12 @@
         <div class="field">
           <label class="field__label" for="adminLoginPassword">密码</label>
           <input class="input" id="adminLoginPassword" type="password" placeholder="请输入管理密码" required />
-          <div class="field__hint" id="adminLoginHint">首次进入时输入的密码将被设为管理密码，请妥善记忆。</div>
+          <div class="field__hint" id="adminLoginHint">首次输入密码将自动设为管理密码，请妥善记忆。</div>
         </div>
         <div class="dialog__footer" style="margin-top: var(--space-3);">
-          <button type="button" class="button button--ghost" id="resetPasswordBtn">忘记密码？重置</button>
           <button type="submit" class="button button--primary">进入管理后台</button>
         </div>
+        <div class="field__hint" style="text-align:center;margin-top:var(--space-2);">忘记密码？在浏览器开发者工具中清除站点 localStorage 后重新设置</div>
       </form>
     </div>
 
@@ -259,9 +259,13 @@
                   <div class="field__hint">留空会在同步时自动创建新的私有 Gist。</div>
                 </div>
                 <div class="field field--full">
-                  <label class="field__label" for="adminPassword">管理密码</label>
-                  <input class="input" id="adminPassword" type="password" placeholder="用于进入管理后台" />
-                  <div class="field__hint">密码保存在当前浏览器本地；清空后下次进入不再要求密码。</div>
+                  <label class="field__label" for="adminOldPassword">当前管理密码</label>
+                  <input class="input" id="adminOldPassword" type="password" placeholder="修改密码时需输入当前密码验证" autocomplete="off" />
+                </div>
+                <div class="field field--full">
+                  <label class="field__label" for="adminPassword">新管理密码</label>
+                  <input class="input" id="adminPassword" type="password" placeholder="留空则不修改" autocomplete="off" />
+                  <div class="field__hint">密码使用 PBKDF2-SHA256 加密存储于本地。设置新密码需验证当前密码。</div>
                 </div>
                 <div class="field field--full">
                   <label class="field__label" for="lowStockThreshold">低库存阈值</label>

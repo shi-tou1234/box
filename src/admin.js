@@ -52,8 +52,8 @@ function initAdminLayout() {
     const hint = $('#adminLoginHint');
     if (hint) {
       hint.textContent = authReadPassword()
-        ? '请输入管理密码。忘记密码可在浏览器 localStorage 中清除 solder_pm.auth 键。'
-        : '首次进入时输入的密码将被设为管理密码，请妥善记忆。';
+        ? '请输入管理密码'
+        : '首次输入密码将自动设为管理密码，请妥善记忆。';
     }
   }
 
@@ -101,11 +101,9 @@ function showAdminPanel(panelId) {
     const current = settingsRead();
     const tokenInput = $('#adminGithubToken');
     const gistInput = $('#adminGistUrl');
-    const passwordInput = $('#adminPassword');
     const thresholdInput = $('#lowStockThreshold');
     if (tokenInput) tokenInput.value = current.token;
     if (gistInput) gistInput.value = current.gistUrl;
-    if (passwordInput) passwordInput.value = authReadPassword();
     if (thresholdInput) thresholdInput.value = current.lowStockThreshold;
     renderSettings();
   }
@@ -155,45 +153,68 @@ function init() {
   $('#cancelQuantityBtn')?.addEventListener('click', closeQuantityDialog);
   $('#quantityForm')?.addEventListener('submit', submitQuantity);
 
-  $('#adminLoginForm')?.addEventListener('submit', (event) => {
+  $('#adminLoginForm')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const password = $('#adminLoginPassword').value || '';
-    if (authLogin(password)) {
-      applyAdminPanelVisibility();
-      showAdminPanel('components');
-      showToast('已进入管理后台');
-    } else {
-      showToast('密码错误', { duration: 2400 });
+    try {
+      if (await authLogin(password)) {
+        applyAdminPanelVisibility();
+        showAdminPanel('components');
+        showToast('已进入管理后台');
+      } else {
+        showToast('密码错误', { duration: 2400 });
+      }
+    } catch (error) {
+      console.error('登录失败', error);
+      showToast('认证系统异常，请确认浏览器支持 Web Crypto API', { duration: 6000 });
     }
   });
 
-  $('#resetPasswordBtn')?.addEventListener('click', () => {
-    if (confirm('重置密码将清除当前密码，重置后需要重新设置密码。是否继续？')) {
-      authClear();
-      showToast('密码已重置，请输入新密码并登录');
-      const hint = $('#adminLoginHint');
-      if (hint) hint.textContent = '密码已重置。请输入新密码，将自动设为管理密码。';
-      $('#adminLoginPassword').value = '';
-      $('#adminLoginPassword').focus();
-    }
-  });
-
-  $('#adminSettingsForm')?.addEventListener('submit', (event) => {
+  $('#adminSettingsForm')?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const token = $('#adminGithubToken').value.trim();
-    const gistUrl = $('#adminGistUrl').value.trim();
-    const password = $('#adminPassword').value || '';
-    const lowStockThreshold = Number($('#lowStockThreshold').value);
-    const current = settingsRead();
-    settingsWrite({ ...current, token, gistUrl, lowStockThreshold: Number.isFinite(lowStockThreshold) ? Math.max(0, lowStockThreshold) : 5, lastSyncAt: readSettingsLastSync() });
-    if (password) authWritePassword(password);
-    showToast('设置已保存');
+    try {
+      const token = $('#adminGithubToken').value.trim();
+      const gistUrl = $('#adminGistUrl').value.trim();
+      const oldPassword = $('#adminOldPassword').value || '';
+      const newPassword = $('#adminPassword').value || '';
+      const lowStockThreshold = Number($('#lowStockThreshold').value);
+      const current = settingsRead();
+      settingsWrite({
+        ...current,
+        token,
+        gistUrl,
+        lowStockThreshold: Number.isFinite(lowStockThreshold) ? Math.max(0, lowStockThreshold) : 5,
+        lastSyncAt: readSettingsLastSync(),
+      });
+
+      if (newPassword) {
+        const hasExisting = !!authReadPassword();
+        if (hasExisting) {
+          const verified = await authLogin(oldPassword);
+          if (!verified) {
+            showToast('当前密码验证失败，密码未修改', { duration: 4000 });
+            showAdminPanel('settings');
+            return;
+          }
+        }
+        await authWritePassword(newPassword);
+        showToast('管理密码已更新');
+      } else {
+        showToast('设置已保存');
+      }
+      $('#adminOldPassword').value = '';
+      $('#adminPassword').value = '';
+    } catch (error) {
+      console.error('保存设置失败', error);
+      showToast('保存失败：' + (error.message || '未知错误'), { duration: 6000 });
+    }
     showAdminPanel('settings');
   });
 
   $('#adminSettingsResetBtn')?.addEventListener('click', () => {
     $('#adminGithubToken').value = '';
     $('#adminGistUrl').value = '';
+    $('#adminOldPassword').value = '';
     $('#adminPassword').value = '';
     $('#lowStockThreshold').value = '5';
   });
