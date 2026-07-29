@@ -5,10 +5,6 @@ import {
   showToast,
   refreshFilters,
   renderCategoryDatalist,
-  renderAdminList,
-  renderDetail,
-  renderInventory,
-  renderSyncStatus,
   applyLoginVisibility,
   applyAdminPanelVisibility,
   authIsLoggedIn,
@@ -30,6 +26,10 @@ import {
   exportJson,
   importJson,
   renderSettings,
+  renderAdminList,
+  renderDetail,
+  renderInventory,
+  renderSyncStatus,
 } from './admin-render.js';
 import { syncToGist, syncFromGist, setSyncLoading } from './admin-sync.js';
 import {
