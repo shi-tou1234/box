@@ -167,6 +167,17 @@ function init() {
     }
   });
 
+  $('#resetPasswordBtn')?.addEventListener('click', () => {
+    if (confirm('重置密码将清除当前密码，重置后需要重新设置密码。是否继续？')) {
+      authClear();
+      showToast('密码已重置，请输入新密码并登录');
+      const hint = $('#adminLoginHint');
+      if (hint) hint.textContent = '密码已重置。请输入新密码，将自动设为管理密码。';
+      $('#adminLoginPassword').value = '';
+      $('#adminLoginPassword').focus();
+    }
+  });
+
   $('#adminSettingsForm')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const token = $('#adminGithubToken').value.trim();
