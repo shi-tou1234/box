@@ -45,8 +45,8 @@ export const state = {
   syncLoading: false,
 };
 
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+export const $ = (selector) => document.querySelector(selector);
+export const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
 export function formatLastSync(iso) {
   if (!iso) return '从未同步';
