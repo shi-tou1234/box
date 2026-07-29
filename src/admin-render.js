@@ -136,7 +136,7 @@ export function renderSettings() {
   } else {
     currentGistEl.textContent = '当前已保存的 Gist：未配置';
   }
-}
+export function renderDetail() {
   const detailEl = $('#detail');
   if (!detailEl) return;
   const item = state.items.find((entry) => entry.id === state.selectedId) || null;
