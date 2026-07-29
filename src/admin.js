@@ -9,7 +9,6 @@ import {
   renderDetail,
   renderInventory,
   renderSyncStatus,
-  renderSettings,
   applyLoginVisibility,
   applyAdminPanelVisibility,
   authIsLoggedIn,
@@ -30,6 +29,7 @@ import {
   submitQuantity,
   exportJson,
   importJson,
+  renderSettings,
 } from './admin-render.js';
 import { syncToGist, syncFromGist, setSyncLoading } from './admin-sync.js';
 import {
