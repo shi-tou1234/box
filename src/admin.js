@@ -1,290 +1,78 @@
 import {
-  STORAGE_KEY,
-  SETTINGS_KEY,
-  AUTH_KEY,
-  storageRead,
-  storageWrite,
+  state,
+  $,
+  $$,
+  showToast,
+  refreshFilters,
+  renderCategoryDatalist,
+  renderAdminList,
+  renderDetail,
+  renderInventory,
+  renderSyncStatus,
+  renderSettings,
+  applyLoginVisibility,
+  applyAdminPanelVisibility,
+  authIsLoggedIn,
+  authLogin,
+  authLogout,
+  readSettingsLastSync,
+} from './admin-state.js';
+import {
+  selectItem,
+  upsertItem,
+  deleteItem,
+  duplicateItem,
+  openForm,
+  closeForm,
+  submitForm,
+  openQuantityDialog,
+  closeQuantityDialog,
+  submitQuantity,
+  exportJson,
+  importJson,
+} from './admin-render.js';
+import { syncToGist, syncFromGist, setSyncLoading } from './admin-sync.js';
+import {
   settingsRead,
   settingsWrite,
   authReadPassword,
   authWritePassword,
-  authClear,
-  authIsLoggedIn,
-  authLogin,
-  authLogout,
-  coerceQuantity,
-  generateId,
-  nowIso,
-  escapeHtml,
-  summarizeChanges,
-  getSortedItems,
-  parseImportedText,
-  getCategoryOptions,
-  getPackageSuggestions,
-  resolveCategoryKey,
+  storageRead,
 } from '../src/shared.js';
 
-const state = {
-  items: [],
-  selectedId: null,
-  filterText: '',
-  filterCategory: '',
-  filterPackage: '',
-  filterStock: 'all',
-  sortKey: 'updatedAt',
-  sortDirection: 'desc',
-  syncLoading: false,
-};
+function initAdminLayout() {
+  const adminBody = $('#adminBody');
+  const logoutBtn = $('#adminLogoutBtn');
+  const isLoggedIn = authIsLoggedIn();
 
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => Array.from(document.querySelectorAll(selector));
-
-function formatLastSync(iso) {
-  if (!iso) return '从未同步';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '从未同步';
-  const diff = Date.now() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return '最后同步：刚刚';
-  return `最后同步：${minutes} 分钟前`;
-}
-
-function readSettingsLastSync() {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return '';
-    return JSON.parse(raw).lastSyncAt || '';
-  } catch {
-    return '';
-  }
-}
-
-function showToast(message, options = {}) {
-  const container = $('#toast');
-  if (!container) return;
-
-  const isError = options.isError || /失败|错误|Failed/i.test(message);
-  const duration = options.duration ?? (isError ? 6000 : 3000);
-
-  const existing = Array.from(container.children);
-  const MAX_TOASTS = 5;
-  while (existing.length >= MAX_TOASTS) {
-    existing.shift().remove();
-  }
-
-  const item = document.createElement('div');
-  item.className = 'toast__item';
-  if (isError) item.classList.add('toast__item--danger');
-  item.textContent = message;
-  container.appendChild(item);
-
-  const dismiss = () => {
-    item.classList.add('toast--leave');
-    item.addEventListener('animationend', () => item.remove(), { once: true });
-  };
-
-  if (options.persistent !== true) {
-    setTimeout(dismiss, duration);
-  }
-
-  item.addEventListener('click', () => {
-    if (!item.classList.contains('toast--leave')) dismiss();
-  });
-}
-
-function applyAdminPanelVisibility() {
-  $('#adminBody')?.classList.remove('hidden');
-  $('#adminLogoutBtn')?.classList.remove('hidden');
-  $('#adminLoginPanel')?.classList.add('hidden');
-}
-
-function applyLoginVisibility() {
-  $('#adminBody')?.classList.add('hidden');
-  $('#adminLogoutBtn')?.classList.add('hidden');
-  $('#adminLoginPanel')?.classList.remove('hidden');
-}
-
-function getFilteredItems() {
-  const text = state.filterText.trim().toLowerCase();
-  const category = state.filterCategory.trim();
-  const pkg = state.filterPackage.trim();
-  const stockMode = state.filterStock;
-
-  return getSortedItems(state.items, state.sortKey, state.sortDirection).filter((item) => {
-    const matchText =
-      !text ||
-      (item.name || '').toLowerCase().includes(text) ||
-      (item.model || '').toLowerCase().includes(text);
-    const matchCategory = !category || item.category === category;
-    const matchPackage = !pkg || item.package === pkg;
-    const matchStock =
-      stockMode === 'all' ||
-      (stockMode === 'in' && item.quantity > 0) ||
-      (stockMode === 'out' && item.quantity <= 0);
-    return matchText && matchCategory && matchPackage && matchStock;
-  });
-}
-
-function getUniqueValues(key) {
-  const values = state.items.map((item) => (item[key] || '').trim()).filter(Boolean);
-  return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'zh'));
-}
-
-function refreshFilters() {
-  const searchInput = $('#adminSearch');
-  const categorySelect = $('#filterCategory');
-  const packageSelect = $('#filterPackage');
-  const stockSelect = $('#filterStock');
-  if (!categorySelect || !packageSelect) return;
-
-  const categories = getUniqueValues('category');
-  const packages = getUniqueValues('package');
-
-  categorySelect.innerHTML = '<option value="">全部</option>' + categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
-  packageSelect.innerHTML = '<option value="">全部</option>' + packages.map((pkg) => `<option value="${escapeHtml(pkg)}">${escapeHtml(pkg)}</option>`).join('');
-
-  state.filterCategory = categorySelect.value;
-  state.filterPackage = packageSelect.value;
-  state.filterStock = stockSelect ? stockSelect.value : 'all';
-  state.filterText = searchInput ? searchInput.value : '';
-}
-
-function renderCategoryDatalist() {
-  const datalist = $('#categoryOptions');
-  if (!datalist) return;
-  const options = Array.from(new Set(getCategoryOptions().concat(getUniqueValues('category')))).sort((a, b) => a.localeCompare(b, 'zh'));
-  datalist.innerHTML = options.map((option) => `<option value="${escapeHtml(option)}"></option>`).join('');
-}
-
-function renderPackageDatalist(category = '') {
-  const datalist = $('#packageOptions');
-  if (!datalist) return;
-  const suggestions = getPackageSuggestions(category);
-  const options = Array.from(new Set(suggestions.concat(getUniqueValues('package')))).sort((a, b) => a.localeCompare(b, 'zh'));
-  datalist.innerHTML = options.map((option) => `<option value="${escapeHtml(option)}"></option>`).join('');
-}
-
-function getStockStatus(item) {
-  const q = coerceQuantity(item.quantity);
-  if (q <= 0) return 'out-of-stock';
-  const threshold = settingsRead().lowStockThreshold || 5;
-  if (q <= threshold) return 'low-stock';
-  return 'in-stock';
-}
-
-function renderAdminList() {
-  const listEl = $('#adminComponentList');
-  const emptyEl = $('#adminListEmpty');
-  const items = getFilteredItems();
-
-  const summaryEl = $('#adminListSummary');
-  if (summaryEl) {
-    summaryEl.textContent = `共 ${items.length} 项 / 全部 ${state.items.length} 项`;
-  }
-
-  if (!items.length) {
-    if (listEl) listEl.innerHTML = '';
-    if (emptyEl) emptyEl.classList.remove('hidden');
-    return;
-  }
-
-  if (emptyEl) emptyEl.classList.add('hidden');
-  if (!listEl) return;
-
-  listEl.innerHTML = items
-    .map((item) => {
-      const activeClass = item.id === state.selectedId ? 'is-active' : '';
-      const statusClass = getStockStatus(item);
-      const statusLabel = statusClass === 'in-stock' ? '有货' : statusClass === 'low-stock' ? '低库存' : '缺货';
-      return `
-        <button type="button" class="list__item ${activeClass}" data-id="${escapeHtml(item.id)}">
-          <span class="status-dot status-dot--${statusClass}" title="${statusLabel}"></span>
-          <span class="list__primary">
-            <span class="list__name">${escapeHtml(item.name || '未命名')}</span>
-            <span class="list__meta">${escapeHtml([item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息')}</span>
-          </span>
-          <span class="list__badges">
-            <span class="badge badge--accent">${escapeHtml(item.category || '未分类')}</span>
-            <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--muted'}">${coerceQuantity(item.quantity)}</span>
-          </span>
-        </button>
-      `;
-    })
-    .join('');
-
-  $$('.list__item').forEach((node) => {
-    node.addEventListener('click', () => selectItem(node.dataset.id));
-  });
-}
-
-function renderInventory() {
-  const tbody = $('#inventoryBody');
-  const emptyEl = $('#inventoryEmpty');
-  if (!tbody) return;
-  const threshold = settingsRead().lowStockThreshold;
-  const items = getSortedItems(state.items, 'name', 'asc');
-
-  if (!items.length) {
-    tbody.innerHTML = '';
-    emptyEl?.classList.remove('hidden');
-    return;
-  }
-
-  emptyEl?.classList.add('hidden');
-  tbody.innerHTML = items
-    .map((item) => {
-      const quantity = coerceQuantity(item.quantity);
-      const threshold = Number.isFinite(threshold) ? threshold : 5;
-      const isLow = quantity > 0 && quantity <= threshold;
-      const statusText = quantity <= 0 ? '缺货' : isLow ? '低库存' : '正常';
-      const statusClass = quantity <= 0 ? 'text-danger' : isLow ? 'text-warning' : 'text-muted';
-      return `
-        <tr>
-          <td><input type="checkbox" class="inventory-check" value="${escapeHtml(item.id)}" /></td>
-          <td>${escapeHtml(item.name || '-')}</td>
-          <td>${escapeHtml(item.category || '-')}</td>
-          <td>${escapeHtml(item.model || '-')}</td>
-          <td>${escapeHtml(item.package || '-')}</td>
-          <td>${quantity}</td>
-          <td>${escapeHtml(item.location || '-')}</td>
-          <td class="${statusClass}">${statusText}</td>
-        </tr>
-      `;
-    })
-    .join('');
-}
-
-function getSelectedInventoryIds() {
-  return Array.from($$('.inventory-check:checked')).map((node) => node.value);
-}
-
-function renderSyncStatus() {
-  const current = settingsRead();
-  const statusEl = $('#syncStatusText');
-  const timeEl = $('#syncLastTime');
-  if (statusEl) {
-    if (current.gistUrl) {
-      const url = escapeHtml(current.gistUrl);
-      statusEl.innerHTML = `当前 Gist：<a href="${url}" target="_blank">${url}</a>`;
-    } else {
-      statusEl.textContent = '未配置 Gist 地址';
+  if (isLoggedIn) {
+    applyAdminPanelVisibility();
+  } else {
+    applyLoginVisibility();
+    const hint = $('#adminLoginHint');
+    if (hint) {
+      hint.textContent = authReadPassword()
+        ? '请输入管理密码。忘记密码可在浏览器 localStorage 中清除 solder_pm.auth 键。'
+        : '首次进入时输入的密码将被设为管理密码，请妥善记忆。';
     }
   }
-  if (timeEl) {
-    timeEl.textContent = formatLastSync(readSettingsLastSync());
-  }
-}
 
-function renderSettings() {
-  const current = settingsRead();
-  const currentGistEl = $('#settingsCurrentGist');
-  if (!currentGistEl) return;
-  if (current.gistUrl) {
-    const url = escapeHtml(current.gistUrl);
-    currentGistEl.innerHTML = `当前已保存的 Gist：<a href="${url}" target="_blank">${url}</a>`;
-  } else {
-    currentGistEl.textContent = '当前已保存的 Gist：未配置';
-  }
+  const tabBtns = adminBody?.querySelectorAll('.nav-item');
+  tabBtns?.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.getAttribute('data-tab');
+      if (!tabId) return;
+      applyAdminPanelVisibility();
+      showAdminPanel(tabId);
+    });
+  });
+
+  logoutBtn?.addEventListener('click', () => {
+    authLogout();
+    state.selectedId = null;
+    applyLoginVisibility();
+    showToast('已退出管理后台');
+  });
 }
 
 function showAdminPanel(panelId) {
@@ -321,502 +109,6 @@ function showAdminPanel(panelId) {
     if (thresholdInput) thresholdInput.value = current.lowStockThreshold;
     renderSettings();
   }
-}
-
-function renderDetail() {
-  const detailEl = $('#detail');
-  if (!detailEl) return;
-  const item = state.items.find((entry) => entry.id === state.selectedId) || null;
-  const titleEl = $('#detailTitle');
-  const actionsEl = $('#detailActions');
-
-  if (!item) {
-    if (titleEl) titleEl.textContent = '选择一个元器件查看详情';
-    if (actionsEl) actionsEl.hidden = true;
-    detailEl.innerHTML = `
-      <div class="empty">
-        <div class="empty__title">未选择条目</div>
-        <div class="empty__desc">从左侧列表选择一个元器件，即可查看详情与快速操作。</div>
-      </div>
-    `;
-    return;
-  }
-
-  if (titleEl) titleEl.textContent = item.name || '未命名元器件';
-  if (actionsEl) actionsEl.hidden = false;
-
-  const createdAtText = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN') : '-';
-  const updatedAtText = item.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-CN') : '-';
-  const datasheetHtml = item.datasheet
-    ? `<a class="link" href="${escapeHtml(item.datasheet)}" target="_blank" rel="noopener noreferrer">打开数据手册</a><div class="field__hint mt-2">${escapeHtml(item.datasheet)}</div>`
-    : `<span class="text-muted">暂无</span>`;
-
-  detailEl.innerHTML = `
-    <div>
-      <div class="detail__section">
-        <div class="field">
-          <div class="field__label">名称</div>
-          <div class="mono">${escapeHtml(item.name || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">种类</div>
-          <div class="mono">${escapeHtml(item.category || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">型号</div>
-          <div class="mono">${escapeHtml(item.model || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">封装</div>
-          <div class="mono">${escapeHtml(item.package || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">当前数量</div>
-          <div>
-            <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--accent'}">${coerceQuantity(item.quantity)}</span>
-          </div>
-        </div>
-        <div class="field">
-          <div class="field__label">位置/库位</div>
-          <div class="mono">${escapeHtml(item.location || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">数据手册</div>
-          <div>${datasheetHtml}</div>
-        </div>
-        <div class="field field--full">
-          <div class="field__label">备注</div>
-          <div class="mono">${escapeHtml(item.notes || '-')}</div>
-        </div>
-        <div class="field field--full">
-          <div class="field__label">创建时间</div>
-          <div class="mono">${escapeHtml(createdAtText)}</div>
-        </div>
-        <div class="field field--full">
-          <div class="field__label">更新时间</div>
-          <div class="mono">${escapeHtml(updatedAtText)}</div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  const editBtn = $('#editBtn');
-  const copyBtn = $('#copyBtn');
-  const quantityBtn = $('#quantityBtn');
-  const deleteBtn = $('#detailDeleteBtn');
-
-  editBtn?.addEventListener('click', () => openForm(item));
-  copyBtn?.addEventListener('click', () => duplicateItem(item));
-  quantityBtn?.addEventListener('click', () => openQuantityDialog(item));
-  deleteBtn?.addEventListener('click', () => deleteItem(item.id));
-}
-
-function selectItem(id) {
-  state.selectedId = id;
-  renderAdminList();
-  renderDetail();
-}
-
-function upsertItem(payload) {
-  const existing = state.items.find((item) => item.id === payload.id) || null;
-  const next = {
-    ...payload,
-    id: payload.id || generateId(),
-    quantity: coerceQuantity(payload.quantity),
-    createdAt: existing ? existing.createdAt : nowIso(),
-    updatedAt: nowIso(),
-  };
-
-  state.items = state.items.filter((item) => item.id !== next.id);
-  state.items.push(next);
-  storageWrite(state.items);
-  refreshFilters();
-  renderCategoryDatalist();
-  renderPackageDatalist(next.category);
-  renderAdminList();
-  if (state.selectedId === next.id) {
-    renderDetail();
-  }
-}
-
-function deleteItem(id) {
-  if (!confirm('确定要删除这条元器件记录吗？')) {
-    return;
-  }
-  state.items = state.items.filter((item) => item.id !== id);
-  if (state.selectedId === id) {
-    state.selectedId = null;
-  }
-  storageWrite(state.items);
-  refreshFilters();
-  renderAdminList();
-  renderDetail();
-  showToast('已删除');
-}
-
-function duplicateItem(item) {
-  if (!item) return;
-  const clone = {
-    ...item,
-    id: undefined,
-    name: `${item.name || '元器件'}（复制）`,
-    quantity: 0,
-    createdAt: undefined,
-    updatedAt: undefined,
-  };
-  upsertItem(clone);
-  showToast('已复制并新增副本');
-}
-
-function resetForm(item = null) {
-  $('#formId').value = item ? item.id : '';
-  $('#formName').value = item ? item.name || '' : '';
-  $('#formCategory').value = item ? item.category || '' : '';
-  $('#formModel').value = item ? item.model || '' : '';
-  $('#formPackage').value = item ? item.package || '' : '';
-  $('#formQuantity').value = item ? (item.quantity || 0) : 0;
-  $('#formLocation').value = item ? item.location || '' : '';
-  $('#formDatasheet').value = item ? item.datasheet || '' : '';
-  $('#formNotes').value = item ? item.notes || '' : '';
-}
-
-function readForm() {
-  return {
-    id: $('#formId').value || undefined,
-    name: $('#formName').value.trim(),
-    category: $('#formCategory').value.trim(),
-    model: $('#formModel').value.trim(),
-    package: $('#formPackage').value.trim(),
-    quantity: $('#formQuantity').value,
-    location: $('#formLocation').value.trim(),
-    datasheet: $('#formDatasheet').value.trim(),
-    notes: $('#formNotes').value.trim(),
-  };
-}
-
-function validateForm(payload) {
-  if (!payload.name) {
-    $('#formName').focus();
-    throw new Error('请填写名称');
-  }
-  if (!payload.category) {
-    $('#formCategory').focus();
-    throw new Error('请填写种类');
-  }
-}
-
-function openForm(item = null) {
-  const dialog = $('#formDialog');
-  $('#formDialogTitle').textContent = item ? '编辑元器件' : '新增元器件';
-  resetForm(item);
-  renderCategoryDatalist();
-  renderPackageDatalist(item ? item.category : '');
-  dialog.showModal();
-}
-
-function closeForm() {
-  $('#formDialog').close();
-}
-
-function submitForm(event) {
-  event.preventDefault();
-  const payload = readForm();
-  try {
-    validateForm(payload);
-  } catch (error) {
-    showToast(error.message, { duration: 2400 });
-    return;
-  }
-  upsertItem(payload);
-  closeForm();
-  showToast('已保存');
-}
-
-function openQuantityDialog(item) {
-  if (!item) return;
-  $('#quantityId').value = item.id;
-  $('#quantityMode').value = 'increase';
-  $('#quantityValue').value = '1';
-  $('#quantityDialog').showModal();
-}
-
-function closeQuantityDialog() {
-  $('#quantityDialog').close();
-}
-
-function submitQuantity(event) {
-  event.preventDefault();
-  const id = $('#quantityId').value;
-  const item = state.items.find((entry) => entry.id === id);
-  const mode = $('#quantityMode').value;
-  const value = coerceQuantity($('#quantityValue').value);
-
-  if (!id || !item) {
-    showToast('请先选择一个元器件');
-    return;
-  }
-  if (value <= 0 && mode !== 'set') {
-    showToast('数量必须大于 0');
-    return;
-  }
-
-  if (mode === 'increase') {
-    item.quantity = item.quantity + value;
-  } else if (mode === 'decrease') {
-    item.quantity = Math.max(0, item.quantity - value);
-  } else {
-    item.quantity = value;
-  }
-
-  item.updatedAt = nowIso();
-  storageWrite(state.items);
-  refreshFilters();
-  renderAdminList();
-  renderDetail();
-  renderInventory();
-  closeQuantityDialog();
-  showToast('数量已更新');
-}
-
-function exportJson() {
-  const blob = new Blob([JSON.stringify(state.items, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'solder-components.json';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  showToast('已导出 JSON');
-}
-
-function importJson(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const remoteItems = parseImportedText(reader.result);
-      const summary = summarizeChanges(state.items, remoteItems);
-      if (!confirm(`将导入 ${summary.totalTarget} 条记录，其中新增 ${summary.added} 条、删除 ${summary.removed} 条，是否继续？`)) {
-        showToast('已取消导入');
-        return;
-      }
-      state.items = remoteItems;
-      storageWrite(state.items);
-      refreshFilters();
-      renderAdminList();
-      renderDetail();
-      renderInventory();
-      showToast('导入成功');
-    } catch (error) {
-      console.error(error);
-      showToast(error.message || '导入失败');
-    }
-  };
-  reader.readAsText(file);
-}
-
-function normalizeGistUrl(url) {
-  if (!url) return '';
-  const match = String(url).match(/gist\.github\.com\/([^/]+\/[^/?#]+)/);
-  return match ? `https://gist.github.com/${match[1]}` : String(url).trim();
-}
-
-async function githubRequest(path, options = {}) {
-  const currentSettings = settingsRead();
-  const token = (options.token || currentSettings.token || '').trim();
-  if (!token) {
-    throw new Error('请先在设置中填写 GitHub Token');
-  }
-  const response = await fetch(`https://api.github.com${path}`, {
-    ...options,
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  });
-  if (!response.ok) {
-    const message = await readGitHubError(response);
-    throw new Error(message || `GitHub 请求失败：${response.status}`);
-  }
-  return response.status === 204 ? null : response.json();
-}
-
-async function readGitHubError(response) {
-  try {
-    const data = await response.json();
-    return data.message || response.statusText;
-  } catch {
-    return response.statusText;
-  }
-}
-
-async function findGistFile(gist, filename = 'components.json') {
-  if (!gist || !gist.files) return null;
-  const file = gist.files[filename];
-  if (!file || !file.truncated) return file || null;
-  return file;
-}
-
-async function readGistContent(gist, filename = 'components.json') {
-  const file = await findGistFile(gist, filename);
-  if (!file || typeof file.content === 'undefined') {
-    return [];
-  }
-  if (file.truncated && file.raw_url) {
-    const response = await fetch(file.raw_url);
-    if (!response.ok) {
-      throw new Error('读取 Gist 文件内容失败');
-    }
-    const text = await response.text();
-    return parseImportedText(text);
-  }
-  return parseImportedText(file.content);
-}
-
-async function syncFromGist() {
-  if (state.syncLoading) return;
-  state.syncLoading = true;
-  setSyncLoading(true);
-
-  try {
-    const currentSettings = settingsRead();
-    const gistUrl = normalizeGistUrl(currentSettings.gistUrl || '');
-
-    if (!gistUrl) {
-      showToast('请先在设置中配置 Gist 地址', { duration: 2400 });
-      return;
-    }
-
-    showToast('正在从 Gist 恢复数据...');
-    const gist = await githubRequest(`/gists/${gistUrl.split('/').pop()}`);
-    const remoteItems = await readGistContent(gist);
-    const summary = summarizeChanges(state.items, remoteItems);
-
-    if (!confirm(`将从 Gist 恢复 ${summary.totalTarget} 条记录，其中新增 ${summary.added} 条、删除 ${summary.removed} 条，是否继续？`)) {
-      showToast('已取消恢复');
-      return;
-    }
-
-    state.items = remoteItems;
-    storageWrite(state.items);
-    settingsWrite({ ...currentSettings, gistUrl, lastSyncAt: nowIso() });
-    refreshFilters();
-    renderAdminList();
-    renderDetail();
-    renderInventory();
-    renderSyncStatus();
-    showToast('已从 Gist 恢复');
-  } catch (error) {
-    console.error(error);
-    showToast(error.message || '同步失败');
-  } finally {
-    state.syncLoading = false;
-    setSyncLoading(false);
-  }
-}
-
-async function syncToGist() {
-  if (state.syncLoading) return;
-  state.syncLoading = true;
-  setSyncLoading(true);
-
-  try {
-    const currentSettings = settingsRead();
-    if (!currentSettings.token) {
-      showToast('请先在设置中填写 GitHub Token', { duration: 2400 });
-      return;
-    }
-
-    showToast('正在上传到 Gist...');
-    const filename = 'components.json';
-    const content = JSON.stringify(state.items, null, 2);
-    let gistId = currentSettings.gistUrl ? currentSettings.gistUrl.split('/').pop() : '';
-    let gist;
-
-    if (gistId) {
-      try {
-        gist = await githubRequest(`/gists/${gistId}`);
-      } catch (error) {
-        console.warn('读取已有 Gist 失败，将创建新的', error);
-        gistId = '';
-      }
-    }
-
-    if (!gistId || !gist) {
-      gist = await githubRequest('/gists', {
-        method: 'POST',
-        body: JSON.stringify({ public: false, files: { [filename]: { content } } }),
-      });
-    } else {
-      gist = await githubRequest(`/gists/${gistId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ files: { [filename]: { content } } }),
-      });
-    }
-
-    const normalized = normalizeGistUrl(gist.html_url || currentSettings.gistUrl || '');
-    settingsWrite({ ...currentSettings, gistUrl: normalized, lastSyncAt: nowIso() });
-    renderSyncStatus();
-    showToast(`已同步到 Gist${normalized ? '：' + normalized : ''}`);
-  } catch (error) {
-    console.error(error);
-    showToast(error.message || '同步失败');
-  } finally {
-    state.syncLoading = false;
-    setSyncLoading(false);
-  }
-}
-
-function setSyncLoading(loading) {
-  const syncBtn = $('#adminSyncToBtn');
-  const restoreBtn = $('#adminSyncFromBtn');
-  if (syncBtn) {
-    syncBtn.disabled = loading;
-    syncBtn.textContent = loading ? '同步中...' : '上传到 Gist';
-  }
-  if (restoreBtn) {
-    restoreBtn.disabled = loading;
-    restoreBtn.textContent = loading ? '恢复中...' : '从 Gist 恢复';
-  }
-}
-
-function initAdminLayout() {
-  const adminBody = $('#adminBody');
-  const logoutBtn = $('#adminLogoutBtn');
-  const isLoggedIn = authIsLoggedIn();
-
-  if (isLoggedIn) {
-    applyAdminPanelVisibility();
-  } else {
-    applyLoginVisibility();
-    const hint = $('#adminLoginHint');
-    if (hint) {
-      hint.textContent = authReadPassword()
-        ? '请输入管理密码。忘记密码可在浏览器 localStorage 中清除 solder_pm.auth 键。'
-        : '首次进入时输入的密码将被设为管理密码，请妥善记忆。';
-    }
-  }
-
-  const tabBtns = adminBody?.querySelectorAll('.nav-item');
-  tabBtns?.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tabId = btn.getAttribute('data-tab');
-      if (!tabId) return;
-      applyAdminPanelVisibility();
-      showAdminPanel(tabId);
-    });
-  });
-
-  logoutBtn?.addEventListener('click', () => {
-    authLogout();
-    state.selectedId = null;
-    applyLoginVisibility();
-    showToast('已退出管理后台');
-  });
 }
 
 function init() {

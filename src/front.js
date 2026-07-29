@@ -234,13 +234,13 @@ function renderList() {
           <div class="status-dot status-dot--${statusClass}" title="${
             statusClass === 'in-stock' ? '有货' : statusClass === 'low-stock' ? '低库存' : '缺货'
           }"></div>
-          <div style="min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; margin-left: var(--space-1);">
-            <div class="truncate" style="font-weight:600; font-size:var(--text-base); color:var(--text-primary);">${escapeHtml(item.name || '未命名')}</div>
+          <div class="card-item__content">
+            <div class="card-item__name truncate">${escapeHtml(item.name || '未命名')}</div>
             <div class="card-meta truncate">${escapeHtml(
               [item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息'
             )}</div>
           </div>
-          <div style="display:flex; gap:var(--space-1); align-items:center; flex-shrink:0;">
+          <div class="card-item__actions">
             <span class="badge badge--accent">${escapeHtml(item.category || '未分类')}</span>
             <span class="badge ${quantityBadgeClass}">${coerceQuantity(item.quantity)}</span>
           </div>
