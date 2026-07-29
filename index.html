@@ -85,6 +85,13 @@
       </div>
     </header>
 
+    <div class="stat-grid" id="statCards"></div>
+
+    <section class="card mt-3" id="categoryChartSection" style="display:none;">
+      <div class="panel__title" style="padding: var(--space-3) var(--space-4) 0; font-size: var(--text-md); font-weight: 600;">分类分布</div>
+      <div id="categoryChart" style="padding: var(--space-2) var(--space-4) var(--space-4);"></div>
+    </section>
+
     <main class="split-layout">
       <section class="panel">
         <div class="panel__header">
@@ -102,7 +109,10 @@
 
       <section class="panel" id="queryDetailPanel">
         <div class="panel__header">
-          <div class="panel__title" id="detailTitle">详情</div>
+          <div style="min-width:0;">
+            <div class="breadcrumb" id="detailBreadcrumb"></div>
+            <div class="panel__title" id="detailTitle">详情</div>
+          </div>
         </div>
         <div class="detail" id="detail">
           <div class="empty-state">

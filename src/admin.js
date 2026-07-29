@@ -164,6 +164,14 @@ function renderPackageDatalist(category = '') {
   datalist.innerHTML = options.map((option) => `<option value="${escapeHtml(option)}"></option>`).join('');
 }
 
+function getStockStatus(item) {
+  const q = coerceQuantity(item.quantity);
+  if (q <= 0) return 'out-of-stock';
+  const threshold = settingsRead().lowStockThreshold || 5;
+  if (q <= threshold) return 'low-stock';
+  return 'in-stock';
+}
+
 function renderAdminList() {
   const listEl = $('#adminComponentList');
   const emptyEl = $('#adminListEmpty');
@@ -186,8 +194,11 @@ function renderAdminList() {
   listEl.innerHTML = items
     .map((item) => {
       const activeClass = item.id === state.selectedId ? 'is-active' : '';
+      const statusClass = getStockStatus(item);
+      const statusLabel = statusClass === 'in-stock' ? '有货' : statusClass === 'low-stock' ? '低库存' : '缺货';
       return `
         <button type="button" class="list__item ${activeClass}" data-id="${escapeHtml(item.id)}">
+          <span class="status-dot status-dot--${statusClass}" title="${statusLabel}"></span>
           <span class="list__primary">
             <span class="list__name">${escapeHtml(item.name || '未命名')}</span>
             <span class="list__meta">${escapeHtml([item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息')}</span>

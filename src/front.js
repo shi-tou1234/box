@@ -100,6 +100,114 @@ function refreshFilters() {
   state.filterPackage = packageSelect.value;
 }
 
+function getLowStockCount() {
+  const threshold = settingsRead().lowStockThreshold || 5;
+  return state.items.filter((item) => item.quantity > 0 && item.quantity <= threshold).length;
+}
+
+function getOutOfStockCount() {
+  return state.items.filter((item) => item.quantity <= 0).length;
+}
+
+function renderStatCards() {
+  const total = state.items.length;
+  const totalStock = state.items.reduce((sum, item) => sum + coerceQuantity(item.quantity), 0);
+  const lowStock = getLowStockCount();
+  const outOfStock = getOutOfStockCount();
+
+  const container = $('#statCards');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card__body">
+        <div class="stat-card__title">总元件数</div>
+        <div class="stat-card__value">${total}</div>
+        <div class="stat-card__hint">已录入元器件</div>
+      </div>
+      <div class="stat-card__icon stat-card--brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__body">
+        <div class="stat-card__title">总库存</div>
+        <div class="stat-card__value">${totalStock}</div>
+        <div class="stat-card__hint">全部元件数量合计</div>
+      </div>
+      <div class="stat-card__icon stat-card--success">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__body">
+        <div class="stat-card__title">低库存</div>
+        <div class="stat-card__value">${lowStock}</div>
+        <div class="stat-card__hint">低于阈值 ${settingsRead().lowStockThreshold || 5}</div>
+      </div>
+      <div class="stat-card__icon stat-card--warning">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__body">
+        <div class="stat-card__title">缺货</div>
+        <div class="stat-card__value">${outOfStock}</div>
+        <div class="stat-card__hint">库存为零的元件</div>
+      </div>
+      <div class="stat-card__icon stat-card--danger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      </div>
+    </div>
+  `;
+}
+
+function renderCategoryChart() {
+  const chartSection = $('#categoryChartSection');
+  const chartEl = $('#categoryChart');
+  if (!chartSection || !chartEl) return;
+
+  const counts = {};
+  state.items.forEach((item) => {
+    const cat = item.category || '未分类';
+    counts[cat] = (counts[cat] || 0) + 1;
+  });
+
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    chartSection.style.display = 'none';
+    return;
+  }
+
+  chartSection.style.display = '';
+  const maxVal = entries[0][1];
+
+  chartEl.innerHTML = entries
+    .map(
+      ([cat, count]) => {
+        const pct = Math.round((count / maxVal) * 100);
+        return `
+          <div class="chart-bar">
+            <div class="chart-bar__label" title="${escapeHtml(cat)}">${escapeHtml(cat)}</div>
+            <div class="chart-bar__track">
+              <div class="chart-bar__fill" style="width: ${pct}%;"></div>
+            </div>
+            <div class="chart-bar__value">${count}</div>
+          </div>
+        `;
+      }
+    )
+    .join('');
+}
+
+function getStockStatus(item) {
+  const q = coerceQuantity(item.quantity);
+  if (q <= 0) return 'out-of-stock';
+  const threshold = settingsRead().lowStockThreshold || 5;
+  if (q <= threshold) return 'low-stock';
+  return 'in-stock';
+}
+
 function renderList() {
   const filtered = getFilteredItems();
   const listEl = $('#componentList');
@@ -119,10 +227,14 @@ function renderList() {
   listEl.innerHTML = filtered
     .map((item) => {
       const activeClass = item.id === state.selectedId ? 'is-active' : '';
+      const statusClass = getStockStatus(item);
       const quantityBadgeClass = item.quantity <= 0 ? 'badge--danger' : 'badge--accent';
       return `
         <button type="button" class="card-item ${activeClass}" data-id="${escapeHtml(item.id)}">
-          <div style="min-width:0; flex:1; display:flex; flex-direction:column; gap:2px;">
+          <div class="status-dot status-dot--${statusClass}" title="${
+            statusClass === 'in-stock' ? '有货' : statusClass === 'low-stock' ? '低库存' : '缺货'
+          }"></div>
+          <div style="min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; margin-left: var(--space-1);">
             <div class="truncate" style="font-weight:600; font-size:var(--text-base); color:var(--text-primary);">${escapeHtml(item.name || '未命名')}</div>
             <div class="card-meta truncate">${escapeHtml(
               [item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息'
@@ -148,6 +260,8 @@ function renderDetail() {
   const detailEl = $('#detail');
 
   if (!item) {
+    const breadcrumb = $('#detailBreadcrumb');
+    if (breadcrumb) breadcrumb.innerHTML = '';
     titleEl.textContent = '详情';
     detailEl.innerHTML = `
       <div class="empty-state">
@@ -156,6 +270,15 @@ function renderDetail() {
       </div>
     `;
     return;
+  }
+
+  const breadcrumb = $('#detailBreadcrumb');
+  if (breadcrumb) {
+    breadcrumb.innerHTML = `
+      <span>元器件</span>
+      <span class="breadcrumb__sep">/</span>
+      <span class="breadcrumb__current">${escapeHtml(item.name || '未命名')}</span>
+    `;
   }
 
   titleEl.textContent = item.name || '未命名元器件';
@@ -284,6 +407,8 @@ function init() {
   refreshFilters();
   renderList();
   renderDetail();
+  renderStatCards();
+  renderCategoryChart();
   initTheme();
   initMobileNav();
 
@@ -306,6 +431,8 @@ function init() {
   $('#filterStock').addEventListener('change', (event) => {
     state.filterStock = event.target.value;
     renderList();
+    renderStatCards();
+    renderCategoryChart();
   });
 }
 
