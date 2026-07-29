@@ -234,9 +234,10 @@ function renderInventory() {
   tbody.innerHTML = items
     .map((item) => {
       const quantity = coerceQuantity(item.quantity);
-      const isLow = quantity <= threshold;
+      const threshold = Number.isFinite(threshold) ? threshold : 5;
+      const isLow = quantity > 0 && quantity <= threshold;
       const statusText = quantity <= 0 ? '缺货' : isLow ? '低库存' : '正常';
-      const statusClass = quantity <= 0 ? 'text-danger' : isLow ? 'text-danger' : 'text-muted';
+      const statusClass = quantity <= 0 ? 'text-danger' : isLow ? 'text-warning' : 'text-muted';
       return `
         <tr>
           <td><input type="checkbox" class="inventory-check" value="${escapeHtml(item.id)}" /></td>
