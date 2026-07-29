@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'solder-pm-v2';
+const CACHE_VERSION = 'solder-pm-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -14,6 +14,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  // Delete ALL old caches, not just known versions
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key)))
@@ -25,12 +26,19 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // Don't cache module scripts — they change frequently and need fresh fetch
-  if (url.pathname.match(/\.js$/)) {
+  // JS files: always fetch fresh, never cache
+  if (url.pathname.endsWith('.js')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
+  // HTML files: network-first, no cache
+  if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname === '') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Other assets (CSS, fonts, images): stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const fetchPromise = fetch(event.request).then((response) => {

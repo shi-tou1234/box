@@ -1,5 +1,6 @@
 import {
   storageRead,
+  settingsRead,
   coerceQuantity,
   escapeHtml,
   getSortedItems,
