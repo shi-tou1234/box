@@ -1,43 +1,44 @@
 :root {
   /* --------------------------------------------------------------------------
-     Clean SaaS — CSS Variables
-     参考 PartBolt / Linear / Notion 的简洁灰白+靛蓝风格，支持明暗双主题。
+     Warm Industrial — CSS Variables
+     灵感来源：blog 项目温暖大地色调 + SaaS 管理后台布局
+     浅色模式：奶油/棕褐暖色调，深棕色文字，棕色强调色
   -------------------------------------------------------------------------- */
 
   /* Background layers ------------------------------------------------------- */
-  --surface-base: #f8fafc;
-  --surface-backdrop: #f1f5f9;
-  --surface-panel: #ffffff;
-  --surface-elevated: #f8fafc;
-  --surface-inset: #f1f5f9;
-  --surface-header: rgba(255, 255, 255, 0.88);
+  --surface-base: #fdf8f0;
+  --surface-backdrop: #f5ede0;
+  --surface-panel: #faf6ef;
+  --surface-elevated: #f5ede0;
+  --surface-inset: #f0e8db;
+  --surface-header: rgba(250, 246, 239, 0.88);
 
   /* Text -------------------------------------------------------------------- */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-inverse: #f8fafc;
-  --text-placeholder: #94a3b8;
+  --text-primary: #2c2416;
+  --text-secondary: #6b5a42;
+  --text-muted: #8b7a62;
+  --text-inverse: #faf6ef;
+  --text-placeholder: #b3a590;
 
   /* Borders ----------------------------------------------------------------- */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border: #e8dcc8;
+  --border-strong: #d4c4aa;
   --border-divider: color-mix(in srgb, var(--border) 80%, transparent);
 
-  /* Accent — indigo/blue ---------------------------------------------------- */
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  /* Accent — warm brown / copper -------------------------------------------- */
+  --accent: #8b4513;
+  --accent-hover: #723710;
   --accent-soft: color-mix(in srgb, var(--accent) 8%, var(--surface-base));
   --accent-glow: color-mix(in srgb, var(--accent) 20%, transparent);
-  --accent-text: #2563eb;
+  --accent-text: #9a5219;
 
   /* Semantic ---------------------------------------------------------------- */
-  --danger: #dc2626;
+  --danger: #c0392b;
   --danger-soft: color-mix(in srgb, var(--danger) 8%, var(--surface-base));
   --danger-glow: color-mix(in srgb, var(--danger) 18%, transparent);
-  --warning: #d97706;
+  --warning: #d4940a;
   --warning-soft: color-mix(in srgb, var(--warning) 10%, var(--surface-base));
-  --success: #16a34a;
+  --success: #2e7d4f;
   --success-soft: color-mix(in srgb, var(--success) 10%, var(--surface-base));
 
   /* Stock status ------------------------------------------------------------ */
@@ -84,12 +85,12 @@
   --radius-full: 999px;
 
   /* Shadows ----------------------------------------------------------------- */
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-base: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.05);
-  --shadow-float: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
-  --shadow-inset: inset 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-up: 0 -4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-xs: 0 1px 2px rgba(44, 36, 22, 0.04);
+  --shadow-sm: 0 1px 3px rgba(44, 36, 22, 0.06), 0 1px 2px rgba(44, 36, 22, 0.04);
+  --shadow-base: 0 1px 3px rgba(44, 36, 22, 0.08), 0 4px 12px rgba(44, 36, 22, 0.05);
+  --shadow-float: 0 8px 24px rgba(44, 36, 22, 0.08), 0 2px 6px rgba(44, 36, 22, 0.04);
+  --shadow-inset: inset 0 1px 2px rgba(44, 36, 22, 0.04);
+  --shadow-up: 0 -4px 16px rgba(44, 36, 22, 0.06);
   --shadow-glow-accent: 0 0 0 3px var(--accent-glow);
   --shadow-glow-danger: 0 0 0 3px var(--danger-glow);
 
@@ -119,40 +120,45 @@
 
 [data-theme="dark"],
 html.dark {
+  /* --------------------------------------------------------------------------
+     Warm Industrial — 深色模式
+     灵感：blog 项目深色棕褐色背景 + 暖棕色文字
+  -------------------------------------------------------------------------- */
+
   /* Background layers ------------------------------------------------------- */
-  --surface-base: #0f172a;
-  --surface-backdrop: #0b1222;
-  --surface-panel: #1e293b;
-  --surface-elevated: #334155;
-  --surface-inset: #0f172a;
-  --surface-header: rgba(30, 41, 59, 0.88);
+  --surface-base: #1a1612;
+  --surface-backdrop: #14100c;
+  --surface-panel: #241f18;
+  --surface-elevated: #322b22;
+  --surface-inset: #1a1612;
+  --surface-header: rgba(36, 31, 24, 0.88);
 
   /* Text -------------------------------------------------------------------- */
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-inverse: #0f172a;
-  --text-placeholder: #64748b;
+  --text-primary: #e8ddd0;
+  --text-secondary: #b3a590;
+  --text-muted: #8b7a62;
+  --text-inverse: #1a1612;
+  --text-placeholder: #6b5a42;
 
   /* Borders ----------------------------------------------------------------- */
-  --border: #334155;
-  --border-strong: #475569;
+  --border: #3d3428;
+  --border-strong: #5a4e3f;
   --border-divider: color-mix(in srgb, var(--border) 70%, transparent);
 
-  /* Accent — blue/cyan ------------------------------------------------------ */
-  --accent: #60a5fa;
-  --accent-hover: #38bdf8;
+  /* Accent — golden amber -------------------------------------------------- */
+  --accent: #e0a060;
+  --accent-hover: #f0b870;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface-base));
   --accent-glow: color-mix(in srgb, var(--accent) 24%, transparent);
-  --accent-text: #38bdf8;
+  --accent-text: #f0b870;
 
   /* Semantic ---------------------------------------------------------------- */
-  --danger: #f87171;
+  --danger: #e74c3c;
   --danger-soft: color-mix(in srgb, var(--danger) 12%, var(--surface-base));
   --danger-glow: color-mix(in srgb, var(--danger) 24%, transparent);
-  --warning: #fbbf24;
+  --warning: #f1c40f;
   --warning-soft: color-mix(in srgb, var(--warning) 14%, var(--surface-base));
-  --success: #4ade80;
+  --success: #27ae60;
   --success-soft: color-mix(in srgb, var(--success) 14%, var(--surface-base));
 
   /* Shadows ----------------------------------------------------------------- */
