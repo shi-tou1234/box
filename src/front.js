@@ -429,7 +429,7 @@ function renderLowStockTable() {
           ${items.map((item) => {
             const vis = getVisual(item.category);
             return `
-              <tr>
+              <tr style="cursor: pointer;" data-detail-id="${escapeHtml(item.id)}">
                 <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
                 <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
                 <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
@@ -493,11 +493,7 @@ function renderInventory() {
           <div class="hero__left">
             <div class="hero__tag"><span class="pulse"></span>共 ${total} 种元器件</div>
             <h1 style="font-size: 24px;">元器件 <span class="accent">库存目录</span></h1>
-            <p>管理所有焊接元器件的型号、封装、库存与位置信息。前往后台可进行新增、编辑与导入导出。</p>
-          </div>
-          <div style="display:flex; gap: 10px; flex-wrap: wrap;">
-            <a class="btn btn-ghost" href="admin/"><i class="fa-solid fa-screwdriver-wrench"></i> 后台管理</a>
-            <a class="btn btn-primary" href="admin/"><i class="fa-solid fa-plus"></i> 新增元器件</a>
+            <p>浏览所有焊接元器件的型号、封装、库存与位置信息。点击任一条目可查看详细参数。</p>
           </div>
         </div>
       </div>
@@ -549,9 +545,8 @@ function renderInventoryView() {
           const qty = coerceQuantity(item.quantity);
           const tier = getStockTier(qty, threshold);
           const ratio = Math.min(1, qty / Math.max(1, threshold * 3));
-          const detailUrl = `admin/#${encodeURIComponent(item.id)}`;
           return `
-            <a class="component-card fade-up" href="${detailUrl}" style="animation-delay: ${i * 0.03}s; text-decoration: none;">
+            <button type="button" class="component-card fade-up" data-detail-id="${escapeHtml(item.id)}" style="animation-delay: ${i * 0.03}s; text-align: left;">
               <div class="card-header">
                 <div style="min-width: 0; flex: 1;">
                   <div class="card-model">${escapeHtml(getPrimaryText(item))}</div>
@@ -574,7 +569,7 @@ function renderInventoryView() {
               <div class="stock-progress" style="margin-top: 10px;">
                 <div class="stock-progress__fill" style="width: ${ratio * 100}%; background: ${tier.color};"></div>
               </div>
-            </a>
+            </button>
           `;
         }).join('')}
       </div>
@@ -595,9 +590,8 @@ function renderInventoryView() {
                 const vis = getVisual(item.category);
                 const qty = coerceQuantity(item.quantity);
                 const tier = getStockTier(qty, threshold);
-                const detailUrl = `admin/#${encodeURIComponent(item.id)}`;
                 return `
-                  <tr style="cursor: pointer;" data-href="${detailUrl}">
+                  <tr style="cursor: pointer;" data-detail-id="${escapeHtml(item.id)}">
                     <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
                     <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
                     <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
@@ -614,12 +608,6 @@ function renderInventoryView() {
         </div>
       </div>
     `;
-    $$('#inventoryView .hub-table tbody tr').forEach((tr) => {
-      tr.addEventListener('click', () => {
-        const href = tr.dataset.href;
-        if (href) window.location.href = href;
-      });
-    });
   }
 }
 
@@ -636,9 +624,8 @@ function renderAlertPage() {
         <div class="hero__left">
           <div class="hero__tag"><span class="pulse"></span>阈值 ≤ ${threshold}</div>
           <h1 style="font-size: 24px;">低库存 <span class="accent">预警列表</span></h1>
-          <p>共 ${items.length} 条元器件库存低于阈值，建议尽快补货。可在后台调整数量或修改阈值。</p>
+          <p>共 ${items.length} 条元器件库存低于阈值，建议尽快补货。点击条目查看详细参数。</p>
         </div>
-        <a class="btn btn-primary" href="admin/"><i class="fa-solid fa-screwdriver-wrench"></i> 前往后台调整</a>
       </div>
     </section>
 
@@ -656,7 +643,7 @@ function renderAlertPage() {
                   const qty = coerceQuantity(item.quantity);
                   const tier = getStockTier(qty, threshold);
                   return `
-                    <tr>
+                    <tr style="cursor: pointer;" data-detail-id="${escapeHtml(item.id)}">
                       <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
                       <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
                       <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
@@ -897,7 +884,10 @@ function switchPage(page) {
     setTimeout(() => {
       renderInventoryView();
       bindInventoryControls();
+      bindDetailTriggers();
     }, 50);
+  } else {
+    setTimeout(bindDetailTriggers, 50);
   }
 
   $$('.hub-nav__item[data-page]').forEach((node) => {
@@ -906,13 +896,141 @@ function switchPage(page) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/* --------------------------------------------------------------------------
+   元器件详情弹窗
+-------------------------------------------------------------------------- */
+function findItemById(id) {
+  return state.items.find((it) => String(it.id) === String(id));
+}
+
+function renderDetailDialog(item) {
+  const vis = getVisual(item.category);
+  const qty = coerceQuantity(item.quantity);
+  const threshold = getThreshold();
+  const tier = getStockTier(qty, threshold);
+  const primary = getPrimaryText(item);
+  const secondary = getSecondaryText(item);
+  const created = item.createdAt ? timeAgo(item.createdAt) : '—';
+  const updated = item.updatedAt ? timeAgo(item.updatedAt) : '—';
+
+  const specs = [
+    { label: '名称', value: item.name, icon: 'fa-tag' },
+    { label: '型号', value: item.model, icon: 'fa-microchip' },
+    { label: '类别', value: vis.name, icon: 'fa-shapes' },
+    { label: '封装', value: item.package, icon: 'fa-cube' },
+    { label: '位置/库位', value: item.location, icon: 'fa-location-dot' },
+    { label: '库存数量', value: qty.toLocaleString(), icon: 'fa-boxes-stacked' },
+    { label: '低库存阈值', value: String(threshold), icon: 'fa-triangle-exclamation' },
+    { label: '库存状态', value: tier.label, icon: 'fa-gauge' },
+  ].filter((s) => s.value !== undefined && s.value !== null && String(s.value).trim() !== '');
+
+  const specsHtml = specs.map((s) => `
+    <div class="detail-spec">
+      <div class="detail-spec__label">
+        <i class="fa-solid ${s.icon}"></i>${escapeHtml(s.label)}
+      </div>
+      <div class="detail-spec__value mono">${escapeHtml(s.value)}</div>
+    </div>
+  `).join('');
+
+  const notesHtml = item.notes && String(item.notes).trim()
+    ? `<div class="detail-section">
+         <div class="detail-section__title"><i class="fa-solid fa-note-sticky"></i> 备注</div>
+         <div class="detail-notes">${escapeHtml(item.notes)}</div>
+       </div>`
+    : '';
+
+  const datasheetHtml = item.datasheet && String(item.datasheet).trim()
+    ? `<a class="btn btn-primary" href="${escapeHtml(item.datasheet)}" target="_blank" rel="noopener noreferrer">
+         <i class="fa-solid fa-file-lines"></i> 查看数据手册
+       </a>`
+    : '';
+
+  return `
+    <div class="detail-dialog__header">
+      <div class="detail-dialog__visual" style="color: ${vis.color};">
+        ${getComponentSVG(vis.key, vis.color)}
+      </div>
+      <div class="detail-dialog__heading">
+        <div class="detail-dialog__title">${escapeHtml(primary)}</div>
+        <div class="detail-dialog__sub">
+          <span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span>
+          ${secondary ? `<span class="detail-dialog__secondary">${escapeHtml(secondary)}</span>` : ''}
+        </div>
+      </div>
+      <button type="button" class="icon-btn detail-dialog__close" id="detailCloseBtn" aria-label="关闭" title="关闭">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="detail-dialog__status">
+      <div class="detail-status-pill" style="background: color-mix(in srgb, ${tier.color} 14%, transparent); color: ${tier.color};">
+        <span class="status-dot" style="background: ${tier.color}; box-shadow: 0 0 0 3px color-mix(in srgb, ${tier.color} 18%, transparent);"></span>
+        <span class="mono" style="font-weight: 700;">${qty.toLocaleString()}</span>
+        <span style="opacity: 0.85;">/ 阈值 ${threshold} · ${tier.label}</span>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section__title"><i class="fa-solid fa-list-check"></i> 元器件参数</div>
+      <div class="detail-specs">${specsHtml}</div>
+    </div>
+
+    ${notesHtml}
+
+    <div class="detail-section">
+      <div class="detail-section__title"><i class="fa-regular fa-clock"></i> 时间信息</div>
+      <div class="detail-specs">
+        <div class="detail-spec">
+          <div class="detail-spec__label"><i class="fa-solid fa-calendar-plus"></i> 创建时间</div>
+          <div class="detail-spec__value mono">${escapeHtml(created)}</div>
+        </div>
+        <div class="detail-spec">
+          <div class="detail-spec__label"><i class="fa-solid fa-calendar-check"></i> 最后更新</div>
+          <div class="detail-spec__value mono">${escapeHtml(updated)}</div>
+        </div>
+      </div>
+    </div>
+
+    ${datasheetHtml ? `<div class="detail-dialog__footer">${datasheetHtml}</div>` : ''}
+  `;
+}
+
+function openDetailDialog(id) {
+  const item = findItemById(id);
+  if (!item) {
+    showToast('未找到该元器件', { isError: true });
+    return;
+  }
+  const dialog = $('#detailDialog');
+  const body = $('#detailDialogBody');
+  if (!dialog || !body) return;
+  body.innerHTML = renderDetailDialog(item);
+  if (typeof dialog.showModal === 'function') {
+    dialog.showModal();
+  } else {
+    dialog.setAttribute('open', '');
+  }
+  $('#detailCloseBtn')?.addEventListener('click', () => dialog.close());
+}
+
+function bindDetailTriggers() {
+  $$('#content [data-detail-id]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      // 避免内部按钮（如数据手册链接）触发
+      if (e.target.closest('a, button:not([data-detail-id])')) return;
+      const id = el.dataset.detailId;
+      if (id) openDetailDialog(id);
+    });
+  });
+}
+
 function renderPlaceholder(title) {
   return `
     <div class="hub-panel hub-placeholder fade-up">
       <div class="hub-placeholder__icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
       <h2>${escapeHtml(title)} 模块</h2>
-      <p>该模块正在建设中，敬请期待。可前往后台进行完整管理操作。</p>
-      <a class="btn btn-primary" href="admin/"><i class="fa-solid fa-arrow-right"></i> 前往后台</a>
+      <p>该模块正在建设中，敬请期待。</p>
     </div>
   `;
 }
@@ -936,6 +1054,7 @@ function bindInventoryControls() {
       chip.classList.add('is-active');
       state.filterCategory = chip.dataset.cat;
       renderInventoryView();
+      bindDetailTriggers();
     });
   });
   $$('.view-toggle button').forEach((btn) => {
@@ -944,6 +1063,7 @@ function bindInventoryControls() {
       btn.classList.add('is-active');
       state.viewMode = btn.dataset.view;
       renderInventoryView();
+      bindDetailTriggers();
     });
   });
   const invSearch = $('#invSearch');
@@ -951,6 +1071,7 @@ function bindInventoryControls() {
     invSearch.addEventListener('input', (e) => {
       state.searchText = e.target.value;
       renderInventoryView();
+      bindDetailTriggers();
     });
   }
 }
@@ -1045,7 +1166,14 @@ function init() {
         invSearch.value = e.target.value;
       }
       renderInventoryView();
+      bindDetailTriggers();
     }
+  });
+
+  // 详情弹窗：点击背景关闭
+  $('#detailDialog')?.addEventListener('click', (e) => {
+    const dialog = e.currentTarget;
+    if (e.target === dialog) dialog.close();
   });
 
   // 就绪提示

@@ -39,10 +39,7 @@
         </div>
 
         <div class="hub-nav__section">
-          <div class="hub-nav__title">管理</div>
-          <a class="hub-nav__item" href="admin/">
-            <i class="fa-solid fa-screwdriver-wrench"></i><span>后台管理</span>
-          </a>
+          <div class="hub-nav__title">分析</div>
           <button type="button" class="hub-nav__item" data-page="stats">
             <i class="fa-solid fa-chart-pie"></i><span>数据统计</span>
           </button>
@@ -53,9 +50,6 @@
           <button type="button" class="hub-nav__item" id="themeBtn" title="切换明暗主题">
             <i class="fa-solid fa-circle-half-stroke"></i><span>切换主题</span>
           </button>
-          <a class="hub-nav__item" href="admin/">
-            <i class="fa-solid fa-gear"></i><span>设置</span>
-          </a>
         </div>
       </nav>
 
@@ -87,9 +81,6 @@
         <button class="icon-btn" id="themeBtnTop" title="切换主题" aria-label="切换主题" type="button">
           <i class="fa-solid fa-circle-half-stroke"></i>
         </button>
-        <a class="btn btn-primary" href="admin/">
-          <i class="fa-solid fa-plus"></i>新增元器件
-        </a>
       </header>
 
       <div class="hub-content" id="content"></div>
@@ -97,6 +88,11 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="src/front.js?v=20260730"></script>
+
+  <!-- 元器件详情弹窗 -->
+  <dialog class="dialog detail-dialog" id="detailDialog" aria-label="元器件详情">
+    <div class="dialog__body detail-dialog__body" id="detailDialogBody"></div>
+  </dialog>
+  <script type="module" src="src/front.js?v=20260731"></script>
 </body>
 </html>
