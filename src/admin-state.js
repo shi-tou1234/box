@@ -1,11 +1,6 @@
 import {
-  STORAGE_KEY,
   SETTINGS_KEY,
-  AUTH_KEY,
-  storageRead,
-  storageWrite,
   settingsRead,
-  settingsWrite,
   authReadPassword,
   authWritePassword,
   authClear,
@@ -13,15 +8,10 @@ import {
   authLogin,
   authLogout,
   coerceQuantity,
-  generateId,
-  nowIso,
   escapeHtml,
-  summarizeChanges,
   getSortedItems,
-  parseImportedText,
   getCategoryOptions,
   getPackageSuggestions,
-  resolveCategoryKey,
 } from '../src/shared.js';
 
 export {
@@ -164,7 +154,7 @@ export function renderPackageDatalist(category = '') {
 export function getStockStatus(item) {
   const q = coerceQuantity(item.quantity);
   if (q <= 0) return 'out-of-stock';
-  const threshold = settingsRead().lowStockThreshold || 5;
+  const threshold = Number.isFinite(settingsRead().lowStockThreshold) ? settingsRead().lowStockThreshold : 5;
   if (q <= threshold) return 'low-stock';
   return 'in-stock';
 }

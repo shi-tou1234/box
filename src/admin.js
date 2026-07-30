@@ -11,16 +11,12 @@ import {
   authLogin,
   authLogout,
   readSettingsLastSync,
+  getSelectedInventoryIds,
 } from './admin-state.js';
 import {
-  selectItem,
-  upsertItem,
-  deleteItem,
-  duplicateItem,
   openForm,
   closeForm,
   submitForm,
-  openQuantityDialog,
   closeQuantityDialog,
   submitQuantity,
   exportJson,
@@ -31,13 +27,14 @@ import {
   renderInventory,
   renderSyncStatus,
 } from './admin-render.js';
-import { syncToGist, syncFromGist, setSyncLoading } from './admin-sync.js';
+import { syncToGist, syncFromGist } from './admin-sync.js';
 import {
   settingsRead,
   settingsWrite,
   authReadPassword,
   authWritePassword,
   storageRead,
+  nowIso,
 } from '../src/shared.js';
 
 function initAdminLayout() {

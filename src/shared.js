@@ -1,4 +1,4 @@
-﻿export const STORAGE_KEY = 'solder_pm.components.v1';
+export const STORAGE_KEY = 'solder_pm.components.v1';
 export const SETTINGS_KEY = 'solder_pm.settings.v1';
 export const AUTH_KEY = 'solder_pm.auth.v1';
 
@@ -263,11 +263,6 @@ export function getPackageSuggestions(category = '') {
 
 export function getCategoryOptions() {
   return Object.keys(PACKAGE_SUGGESTIONS);
-}
-
-export function getUsedPackages(category = '') {
-  const key = resolveCategoryKey(category);
-  return [];
 }
 
 const PACKAGE_SUGGESTIONS = {

@@ -1,24 +1,19 @@
 import {
   state,
   $,
-  $$,
+  $$/,
   showToast,
   getFilteredItems,
   getUniqueValues,
   getStockStatus,
-  getSelectedInventoryIds,
-  applyAdminPanelVisibility,
-  applyLoginVisibility,
   formatLastSync,
   readSettingsLastSync,
   renderCategoryDatalist,
   renderPackageDatalist,
 } from './admin-state.js';
 import {
-  storageRead,
   storageWrite,
   settingsRead,
-  settingsWrite,
   coerceQuantity,
   generateId,
   nowIso,
@@ -77,7 +72,7 @@ export function renderInventory() {
   const tbody = $('#inventoryBody');
   const emptyEl = $('#inventoryEmpty');
   if (!tbody) return;
-  const threshold = settingsRead().lowStockThreshold;
+  const threshold = Number.isFinite(settingsRead().lowStockThreshold) ? settingsRead().lowStockThreshold : 5;
   const items = getSortedItems(state.items, 'name', 'asc');
 
   if (!items.length) {
@@ -215,16 +210,37 @@ export function renderDetail() {
     </div>
   `;
 
+}
+
+function bindDetailActions() {
   const editBtn = $('#editBtn');
   const copyBtn = $('#copyBtn');
   const quantityBtn = $('#quantityBtn');
   const deleteBtn = $('#detailDeleteBtn');
 
-  editBtn?.addEventListener('click', () => openForm(item));
-  copyBtn?.addEventListener('click', () => duplicateItem(item));
-  quantityBtn?.addEventListener('click', () => openQuantityDialog(item));
-  deleteBtn?.addEventListener('click', () => deleteItem(item.id));
+  editBtn?.addEventListener('click', () => {
+    const item = state.items.find((entry) => entry.id === state.selectedId);
+    if (!item) return;
+    openForm(item);
+  });
+  copyBtn?.addEventListener('click', () => {
+    const item = state.items.find((entry) => entry.id === state.selectedId);
+    if (!item) return;
+    duplicateItem(item);
+  });
+  quantityBtn?.addEventListener('click', () => {
+    const item = state.items.find((entry) => entry.id === state.selectedId);
+    if (!item) return;
+    openQuantityDialog(item);
+  });
+  deleteBtn?.addEventListener('click', () => {
+    const item = state.items.find((entry) => entry.id === state.selectedId);
+    if (!item) return;
+    deleteItem(item.id);
+  });
 }
+
+bindDetailActions();
 
 export function selectItem(id) {
   state.selectedId = id;

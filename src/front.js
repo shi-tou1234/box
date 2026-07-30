@@ -102,7 +102,7 @@ function refreshFilters() {
 }
 
 function getLowStockCount() {
-  const threshold = settingsRead().lowStockThreshold || 5;
+  const threshold = Number.isFinite(settingsRead().lowStockThreshold) ? settingsRead().lowStockThreshold : 5;
   return state.items.filter((item) => item.quantity > 0 && item.quantity <= threshold).length;
 }
 
@@ -144,7 +144,7 @@ function renderStatCards() {
       <div class="stat-card__body">
         <div class="stat-card__title">低库存</div>
         <div class="stat-card__value">${lowStock}</div>
-        <div class="stat-card__hint">低于阈值 ${settingsRead().lowStockThreshold || 5}</div>
+        <div class="stat-card__hint">低于阈值 ${Number.isFinite(settingsRead().lowStockThreshold) ? settingsRead().lowStockThreshold : 5}</div>
       </div>
       <div class="stat-card__icon stat-card--warning">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -204,7 +204,7 @@ function renderCategoryChart() {
 function getStockStatus(item) {
   const q = coerceQuantity(item.quantity);
   if (q <= 0) return 'out-of-stock';
-  const threshold = settingsRead().lowStockThreshold || 5;
+  const threshold = Number.isFinite(settingsRead().lowStockThreshold) ? settingsRead().lowStockThreshold : 5;
   if (q <= threshold) return 'low-stock';
   return 'in-stock';
 }
@@ -229,7 +229,7 @@ function renderList() {
     .map((item) => {
       const activeClass = item.id === state.selectedId ? 'is-active' : '';
       const statusClass = getStockStatus(item);
-      const quantityBadgeClass = item.quantity <= 0 ? 'badge--danger' : 'badge--accent';
+      const quantityBadgeClass = coerceQuantity(item.quantity) <= 0 ? 'badge--danger' : 'badge--accent';
       return `
         <button type="button" class="card-item ${activeClass}" data-id="${escapeHtml(item.id)}">
           <div class="status-dot status-dot--${statusClass}" title="${

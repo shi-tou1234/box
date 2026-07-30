@@ -26,15 +26,15 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // JS files: always fetch fresh, never cache
+  // JS files: network-first with cache fallback for offline support
   if (url.pathname.endsWith('.js')) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
     return;
   }
 
-  // HTML files: network-first, no cache
+  // HTML files: network-first with cache fallback for offline support
   if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname === '') {
-    event.respondWith(fetch(event.request));
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
     return;
   }
 
@@ -47,7 +47,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => cached);
+      }).catch(() => cached || Response.error());
       return cached || fetchPromise;
     })
   );

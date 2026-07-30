@@ -1,19 +1,24 @@
 import {
   state,
   $,
-  $$,
   showToast,
-  applyAdminPanelVisibility,
-  applyLoginVisibility,
+  refreshFilters,
 } from './admin-state.js';
 import {
   settingsRead,
-  storageRead,
+  settingsWrite,
   storageWrite,
+  summarizeChanges,
+  nowIso,
   escapeHtml,
 } from '../src/shared.js';
 
-import { renderSyncStatus } from './admin-render.js';
+import {
+  renderAdminList,
+  renderDetail,
+  renderInventory,
+  renderSyncStatus,
+} from './admin-render.js';
 
 export function normalizeGistUrl(url) {
   if (!url) return '';
@@ -56,8 +61,7 @@ export async function readGitHubError(response) {
 export async function findGistFile(gist, filename = 'components.json') {
   if (!gist || !gist.files) return null;
   const file = gist.files[filename];
-  if (!file || !file.truncated) return file || null;
-  return file;
+  return file || null;
 }
 
 export async function readGistContent(gist, filename = 'components.json') {
