@@ -342,3 +342,70 @@
     padding: 0;
   }
 }
+
+/* ==========================================================================
+   Mobile Adaptation — 700px / 480px 断点
+   目标：小屏无横向滚动；表格横向滚动；面板/对话框纵向堆叠
+========================================================================== */
+
+@media (max-width: 700px) {
+  /* 收紧外层间距，避免边缘溢出 */
+  .app-shell,
+  .workbench,
+  .admin-shell {
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  /* 顶栏允许换行，避免操作区挤出视口 */
+  .topbar__inner {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  /* 面板头允许换行：标题与操作区在窄屏自然折行 */
+  .panel__header {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  /* 表格容器横向滚动，避免整页出现水平滚动条 */
+  .admin-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 极小屏进一步收紧间距 */
+  .app-shell,
+  .workbench,
+  .admin-shell {
+    padding: var(--space-2);
+    gap: var(--space-2);
+  }
+
+  .topbar {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* 面板头改为纵向堆叠：标题在上，操作按钮在下 */
+  .panel__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .panel__actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* 对话框底部按钮纵向排列并占满宽度，便于触控 */
+  .dialog__footer {
+    flex-direction: column-reverse;
+  }
+
+  .dialog__footer .button {
+    width: 100%;
+  }
+}
