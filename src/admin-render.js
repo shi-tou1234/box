@@ -11,6 +11,8 @@ import {
   applyLoginVisibility,
   formatLastSync,
   readSettingsLastSync,
+  renderCategoryDatalist,
+  renderPackageDatalist,
 } from './admin-state.js';
 import {
   storageRead,
