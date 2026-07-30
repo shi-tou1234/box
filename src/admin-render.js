@@ -309,13 +309,44 @@ export function readForm() {
   };
 }
 
+function markFieldInvalid(inputId, errorId, message) {
+  const input = $(`#${inputId}`);
+  const errorEl = $(`#${errorId}`);
+  if (input) {
+    input.classList.add('is-invalid');
+    input.addEventListener('input', () => {
+      input.classList.remove('is-invalid');
+      if (errorEl) errorEl.hidden = true;
+    }, { once: true });
+    input.focus();
+  }
+  if (errorEl) {
+    errorEl.textContent = message;
+    errorEl.hidden = false;
+  }
+}
+
+export function clearFormValidation() {
+  ['formName', 'formCategory'].forEach((id) => {
+    const input = $(`#${id}`);
+    if (input) input.classList.remove('is-invalid');
+  });
+  ['formNameError', 'formCategoryError', 'quantityValueError'].forEach((id) => {
+    const errorEl = $(`#${id}`);
+    if (errorEl) errorEl.hidden = true;
+  });
+  const quantityInput = $('#quantityValue');
+  if (quantityInput) quantityInput.classList.remove('is-invalid');
+}
+
 export function validateForm(payload) {
+  clearFormValidation();
   if (!payload.name) {
-    $('#formName').focus();
+    markFieldInvalid('formName', 'formNameError', '请填写名称');
     throw new Error('请填写名称');
   }
   if (!payload.category) {
-    $('#formCategory').focus();
+    markFieldInvalid('formCategory', 'formCategoryError', '请填写种类');
     throw new Error('请填写种类');
   }
 }
@@ -324,6 +355,7 @@ export function openForm(item = null) {
   const dialog = $('#formDialog');
   $('#formDialogTitle').textContent = item ? '编辑元器件' : '新增元器件';
   resetForm(item);
+  clearFormValidation();
   renderCategoryDatalist();
   renderPackageDatalist(item ? item.category : '');
   dialog.showModal();
@@ -352,6 +384,7 @@ export function openQuantityDialog(item) {
   $('#quantityId').value = item.id;
   $('#quantityMode').value = 'increase';
   $('#quantityValue').value = '1';
+  clearFormValidation();
   $('#quantityDialog').showModal();
 }
 
@@ -371,6 +404,7 @@ export function submitQuantity(event) {
     return;
   }
   if (value <= 0 && mode !== 'set') {
+    markFieldInvalid('quantityValue', 'quantityValueError', '数量必须大于 0');
     showToast('数量必须大于 0');
     return;
   }

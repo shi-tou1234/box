@@ -86,7 +86,12 @@
     </header>
 
     <div class="top-summary">
-      <div class="stat-grid" id="statCards"></div>
+      <div class="stat-grid" id="statCards">
+        <div class="skeleton skeleton-stat" aria-hidden="true"></div>
+        <div class="skeleton skeleton-stat" aria-hidden="true"></div>
+        <div class="skeleton skeleton-stat" aria-hidden="true"></div>
+        <div class="skeleton skeleton-stat" aria-hidden="true"></div>
+      </div>
 
       <section id="categoryChartSection" style="display:none; padding: 0 var(--space-2);">
         <div class="panel__title" style="font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); margin-bottom: 2px;">分类分布</div>
@@ -102,7 +107,32 @@
             <span class="hint" id="listSummary">共 0 项</span>
           </div>
         </div>
-        <div class="card-list" id="componentList"></div>
+        <div class="card-list" id="componentList">
+          <div class="skeleton-row" aria-hidden="true">
+            <div class="skeleton skeleton-row__dot"></div>
+            <div class="skeleton-row__lines">
+              <div class="skeleton skeleton--text" style="width: 55%;"></div>
+              <div class="skeleton skeleton--text-short"></div>
+            </div>
+            <div class="skeleton skeleton-row__badge"></div>
+          </div>
+          <div class="skeleton-row" aria-hidden="true">
+            <div class="skeleton skeleton-row__dot"></div>
+            <div class="skeleton-row__lines">
+              <div class="skeleton skeleton--text" style="width: 45%;"></div>
+              <div class="skeleton skeleton--text-short"></div>
+            </div>
+            <div class="skeleton skeleton-row__badge"></div>
+          </div>
+          <div class="skeleton-row" aria-hidden="true">
+            <div class="skeleton skeleton-row__dot"></div>
+            <div class="skeleton-row__lines">
+              <div class="skeleton skeleton--text" style="width: 60%;"></div>
+              <div class="skeleton skeleton--text-short"></div>
+            </div>
+            <div class="skeleton skeleton-row__badge"></div>
+          </div>
+        </div>
         <div class="empty-state hidden" id="listEmpty">
           <div class="empty-state__title">暂无匹配结果</div>
           <div class="empty-state__desc">尝试调整筛选条件。</div>

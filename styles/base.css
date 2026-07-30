@@ -29,6 +29,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--text-primary);
 }
 
 svg {
@@ -46,6 +52,7 @@ svg {
 a {
   color: var(--accent);
   text-decoration: none;
+  transition: color var(--transition-fast);
 }
 
 a:hover {
@@ -92,6 +99,10 @@ button {
   color: var(--danger) !important;
 }
 
+.text-warning {
+  color: var(--warning) !important;
+}
+
 .truncate {
   white-space: nowrap;
   overflow: hidden;
@@ -109,8 +120,8 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   padding: 0;
 }
 
@@ -133,6 +144,22 @@ button {
 
 .mt-3 {
   margin-top: var(--space-3);
+}
+
+/* 内容区入场淡入 */
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-slide-in 240ms var(--ease-out);
 }
 
 /* Scrollbar */

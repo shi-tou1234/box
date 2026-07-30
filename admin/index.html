@@ -302,11 +302,13 @@
           <div class="field">
             <label class="field__label" for="formName">名称 <span class="required">*</span></label>
             <input class="input" id="formName" required />
+            <div class="field__error" id="formNameError" hidden></div>
           </div>
           <div class="field">
             <label class="field__label" for="formCategory">种类 <span class="required">*</span></label>
             <input class="input" id="formCategory" list="categoryOptions" required placeholder="电阻、电容、MCU..." />
             <datalist id="categoryOptions"></datalist>
+            <div class="field__error" id="formCategoryError" hidden></div>
           </div>
           <div class="field">
             <label class="field__label" for="formModel">型号</label>
@@ -364,6 +366,7 @@
           <div class="field">
             <label class="field__label" for="quantityValue">数量 <span class="required">*</span></label>
             <input class="input" id="quantityValue" type="number" inputmode="numeric" min="0" step="1" required />
+            <div class="field__error" id="quantityValueError" hidden></div>
           </div>
         </div>
         <div class="dialog__footer">
