@@ -6,8 +6,8 @@
 .workbench {
   min-height: 100%;
   display: grid;
-  grid-template-rows: auto 1fr;
-  gap: var(--space-4);
+  grid-template-rows: auto auto auto 1fr;
+  gap: var(--space-3);
   padding: var(--space-4);
   max-width: 1320px;
   margin: 0 auto;

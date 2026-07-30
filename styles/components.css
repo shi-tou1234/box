@@ -243,15 +243,15 @@
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .stat-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   background: var(--surface-panel);
   border: var(--panel-border);
   border-radius: var(--radius-md);
@@ -282,7 +282,7 @@
 
 .stat-card__value {
   font-family: var(--font-label);
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
@@ -298,15 +298,15 @@
 .stat-card__icon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius);
   flex-shrink: 0;
 }
 
 .stat-card__icon svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   stroke-width: 2;
 }
 
@@ -335,7 +335,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) 0;
+  padding: 2px 0;
 }
 
 .chart-bar__label {
@@ -351,7 +351,7 @@
 
 .chart-bar__track {
   flex: 1;
-  height: 20px;
+  height: 16px;
   background: var(--surface-inset);
   border-radius: var(--radius-sm);
   overflow: hidden;
