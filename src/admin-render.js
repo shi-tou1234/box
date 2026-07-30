@@ -1,7 +1,7 @@
 import {
   state,
   $,
-  $$/,
+  $$,
   showToast,
   getFilteredItems,
   getUniqueValues,
