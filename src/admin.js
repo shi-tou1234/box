@@ -10,7 +10,6 @@ import {
   authIsLoggedIn,
   authLogin,
   authLogout,
-  authClear,
   readSettingsLastSync,
   getSelectedInventoryIds,
 } from './admin-state.js';
@@ -55,19 +54,6 @@ function bindLoginForm() {
     } catch (error) {
       console.error('登录失败', error);
       showToast('认证系统异常，请确认浏览器支持 Web Crypto API', { duration: 6000 });
-    }
-  });
-}
-
-function bindResetPasswordBtn() {
-  $('#resetPasswordBtn')?.addEventListener('click', () => {
-    if (confirm('确定要重置密码吗？这将清除旧的密码凭据，之后输入的新密码将成为管理密码。')) {
-      authClear();
-      const input = $('#adminLoginPassword');
-      if (input) input.value = '';
-      const hint = $('#adminLoginHint');
-      if (hint) hint.textContent = '密码已重置，请输入新密码（首次输入将设为管理密码）。';
-      showToast('密码已重置，请输入新密码');
     }
   });
 }
@@ -146,7 +132,6 @@ function init() {
 
   // 优先绑定登录表单，确保即使后续渲染函数出错也不会导致表单无法提交
   bindLoginForm();
-  bindResetPasswordBtn();
 
   // 后台渲染（用 try/catch 保护，避免未登录时渲染隐藏面板出错中断 init）
   try {
