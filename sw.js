@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'solder-pm-v4';
+const CACHE_VERSION = 'solder-pm-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

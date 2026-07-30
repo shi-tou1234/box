@@ -1,44 +1,57 @@
 :root {
   /* --------------------------------------------------------------------------
-     Circuit Slate — CSS Variables（全新配色）
-     浅色模式：冷调石灰白 + 青蓝（Cyan）强调色，SaaS 工程管理台风
+     SOLDER · Circuit Slate — CSS Variables
+     浅色模式：冷白石 + 橙色强调（暗色为默认主题，见下方 [data-theme="dark"]）
   -------------------------------------------------------------------------- */
 
   /* Background layers ------------------------------------------------------- */
-  --surface-base: #f3f6fa;
-  --surface-backdrop: #e9eef5;
+  --surface-base: #f4f6fa;
+  --surface-backdrop: #eaeef4;
   --surface-panel: #ffffff;
-  --surface-elevated: #f1f5f9;
-  --surface-inset: #edf1f7;
+  --surface-elevated: #f1f4f9;
+  --surface-inset: #eef1f6;
   --surface-header: rgba(255, 255, 255, 0.85);
+  --bg-grid: rgba(15, 23, 42, 0.04);
 
   /* Text -------------------------------------------------------------------- */
-  --text-primary: #16202e;
-  --text-secondary: #4a5a70;
-  --text-muted: #7c8ba0;
+  --text-primary: #161b24;
+  --text-secondary: #4a5263;
+  --text-muted: #6b7488;
   --text-inverse: #ffffff;
-  --text-placeholder: #a3b0c2;
+  --text-placeholder: #9aa3b5;
+  --text-dim: #8b94a6;
 
   /* Borders ----------------------------------------------------------------- */
-  --border: #e2e8f1;
-  --border-strong: #c5d0de;
+  --border: #e1e6ee;
+  --border-strong: #c8d0dc;
   --border-divider: color-mix(in srgb, var(--border) 80%, transparent);
 
-  /* Accent — cyan ----------------------------------------------------------- */
-  --accent: #0e7490;
-  --accent-hover: #155e75;
-  --accent-soft: color-mix(in srgb, var(--accent) 8%, var(--surface-base));
-  --accent-glow: color-mix(in srgb, var(--accent) 20%, transparent);
-  --accent-text: #0e7490;
+  /* Accent — 琥珀橙 -------------------------------------------------------- */
+  --accent: #f57c00;
+  --accent-hover: #ef6c00;
+  --accent-2: #ff9800;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface-base));
+  --accent-glow: color-mix(in srgb, var(--accent) 22%, transparent);
+  --accent-text: #f57c00;
+
+  /* Secondary — 青蓝 -------------------------------------------------------- */
+  --cyan: #0d9488;
+  --cyan-hover: #0f766e;
+  --cyan-soft: color-mix(in srgb, var(--cyan) 12%, var(--surface-base));
+  --cyan-text: #0d9488;
+
+  /* Magenta (IC 类别) ------------------------------------------------------- */
+  --magenta: #c026d3;
+  --magenta-soft: color-mix(in srgb, var(--magenta) 12%, var(--surface-base));
 
   /* Semantic ---------------------------------------------------------------- */
   --danger: #dc2626;
-  --danger-soft: color-mix(in srgb, var(--danger) 8%, var(--surface-base));
-  --danger-glow: color-mix(in srgb, var(--danger) 18%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 10%, var(--surface-base));
+  --danger-glow: color-mix(in srgb, var(--danger) 22%, transparent);
   --warning: #d97706;
-  --warning-soft: color-mix(in srgb, var(--warning) 10%, var(--surface-base));
+  --warning-soft: color-mix(in srgb, var(--warning) 12%, var(--surface-base));
   --success: #059669;
-  --success-soft: color-mix(in srgb, var(--success) 10%, var(--surface-base));
+  --success-soft: color-mix(in srgb, var(--success) 12%, var(--surface-base));
 
   /* Stock status ------------------------------------------------------------ */
   --in-stock: var(--success);
@@ -49,7 +62,7 @@
   --out-of-stock-soft: var(--danger-soft);
 
   /* Typography -------------------------------------------------------------- */
-  --font-sans: 'Inter', 'IBM Plex Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Space Grotesk', 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', 'SF Mono', 'Fira Code', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
   --font-data: var(--font-mono);
   --font-label: var(--font-sans);
@@ -60,6 +73,8 @@
   --text-md: 15px;
   --text-lg: 17px;
   --text-xl: 20px;
+  --text-2xl: 28px;
+  --text-3xl: 32px;
 
   --leading-tight: 1.25;
   --leading-base: 1.5;
@@ -81,6 +96,7 @@
   --radius: 8px;
   --radius-md: 10px;
   --radius-lg: 14px;
+  --radius-xl: 16px;
   --radius-full: 999px;
 
   /* Shadows ----------------------------------------------------------------- */
@@ -92,11 +108,12 @@
   --shadow-up: 0 -6px 20px rgba(15, 23, 42, 0.08);
   --shadow-glow-accent: 0 0 0 3px var(--accent-glow);
   --shadow-glow-danger: 0 0 0 3px var(--danger-glow);
+  --shadow-accent: 0 4px 16px rgba(245, 124, 0, 0.3);
 
   /* Layout ------------------------------------------------------------------ */
-  --header-height: 58px;
-  --sidebar-width: 200px;
-  --topbar-sticky-offset: 12px;
+  --header-height: 64px;
+  --sidebar-width: 240px;
+  --topbar-sticky-offset: 0px;
   --panel-border: 1px solid var(--border);
 
   /* Transitions ------------------------------------------------------------- */
@@ -118,55 +135,79 @@
   --tick-color: color-mix(in srgb, var(--border-strong) 70%, transparent);
 }
 
+/* 暗色为默认主题（贴合 SOLDER 设计稿） */
+:root {
+  color-scheme: dark;
+}
+
+[data-theme="light"],
+html:not(.dark):not([data-theme="dark"]) {
+  color-scheme: light;
+}
+
 [data-theme="dark"],
 html.dark {
   /* --------------------------------------------------------------------------
-     Circuit Slate — 深色模式：深海军蓝 + 亮青
+     SOLDER — 深色模式（设计稿原版）
   -------------------------------------------------------------------------- */
 
   /* Background layers ------------------------------------------------------- */
-  --surface-base: #0c1220;
-  --surface-backdrop: #090e19;
-  --surface-panel: #131a2b;
-  --surface-elevated: #1b2438;
-  --surface-inset: #0f1524;
-  --surface-header: rgba(19, 26, 43, 0.88);
+  --surface-base: #0a0c10;
+  --surface-backdrop: #0f131a;
+  --surface-panel: #161b24;
+  --surface-elevated: #1c2230;
+  --surface-inset: #0f131a;
+  --surface-header: rgba(15, 19, 26, 0.85);
+  --bg-grid: rgba(255, 255, 255, 0.018);
 
   /* Text -------------------------------------------------------------------- */
-  --text-primary: #e2e8f4;
-  --text-secondary: #a3b0c6;
-  --text-muted: #71809a;
-  --text-inverse: #0c1220;
-  --text-placeholder: #5a6a84;
+  --text-primary: #e6e9ef;
+  --text-secondary: #b4bac6;
+  --text-muted: #8b94a6;
+  --text-inverse: #0a0c10;
+  --text-placeholder: #5d6577;
+  --text-dim: #5d6577;
 
   /* Borders ----------------------------------------------------------------- */
-  --border: #27324a;
-  --border-strong: #3b4966;
+  --border: #232a37;
+  --border-strong: #2f3849;
   --border-divider: color-mix(in srgb, var(--border) 70%, transparent);
 
-  /* Accent — bright cyan ---------------------------------------------------- */
-  --accent: #22d3ee;
-  --accent-hover: #67e8f9;
-  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface-base));
-  --accent-glow: color-mix(in srgb, var(--accent) 24%, transparent);
-  --accent-text: #67e8f9;
+  /* Accent — 琥珀橙 -------------------------------------------------------- */
+  --accent: #ffa726;
+  --accent-hover: #ffb74d;
+  --accent-2: #ffb74d;
+  --accent-soft: rgba(255, 167, 38, 0.12);
+  --accent-glow: rgba(255, 167, 38, 0.24);
+  --accent-text: #ffa726;
+
+  /* Secondary — 青蓝 -------------------------------------------------------- */
+  --cyan: #4dd0c1;
+  --cyan-hover: #80deea;
+  --cyan-soft: rgba(77, 208, 193, 0.12);
+  --cyan-text: #4dd0c1;
+
+  /* Magenta ----------------------------------------------------------------- */
+  --magenta: #e879f9;
+  --magenta-soft: rgba(232, 121, 249, 0.12);
 
   /* Semantic ---------------------------------------------------------------- */
-  --danger: #f87171;
-  --danger-soft: color-mix(in srgb, var(--danger) 12%, var(--surface-base));
-  --danger-glow: color-mix(in srgb, var(--danger) 24%, transparent);
-  --warning: #fbbf24;
-  --warning-soft: color-mix(in srgb, var(--warning) 14%, var(--surface-base));
-  --success: #34d399;
-  --success-soft: color-mix(in srgb, var(--success) 14%, var(--surface-base));
+  --danger: #ef5350;
+  --danger-soft: rgba(239, 83, 80, 0.12);
+  --danger-glow: rgba(239, 83, 80, 0.24);
+  --warning: #ffb300;
+  --warning-soft: rgba(255, 179, 0, 0.12);
+  --success: #66bb6a;
+  --success-soft: rgba(102, 187, 106, 0.12);
 
   /* Shadows ----------------------------------------------------------------- */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.22);
-  --shadow-base: 0 1px 3px rgba(0, 0, 0, 0.36), 0 4px 14px rgba(0, 0, 0, 0.26);
-  --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.46), 0 2px 8px rgba(0, 0, 0, 0.28);
-  --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.28);
-  --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.32);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.34), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-base: 0 1px 3px rgba(0, 0, 0, 0.38), 0 4px 14px rgba(0, 0, 0, 0.28);
+  --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.34);
+  --shadow-accent: 0 4px 16px rgba(255, 167, 38, 0.35);
 
   --focus-ring: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--accent-glow);
   --focus-ring-inset: inset 0 0 0 2px var(--accent-glow);
