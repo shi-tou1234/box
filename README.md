@@ -102,3 +102,7 @@ python -m http.server 8000
 ## License
 
 MIT
+# BENCH-01 · 焊接元器件查询/管理工具
+
+> Auto-updated 2026-08-02 13:56
+
