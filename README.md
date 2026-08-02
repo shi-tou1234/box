@@ -15,32 +15,6 @@
 - 明暗主题切换，跟随系统偏好
 - 移动端底部导航
 
-### 管理后台（`/admin/`）
-- 密码登录校验（密码仅存于当前浏览器）
-- 元器件管理：新增 / 编辑 / 复制 / 删除
-- 库存管理：批量清零、批量删除、低库存提醒
-- 导入导出：JSON 全量备份，导入前差异比对
-- Gist 同步：通过 GitHub Gist 备份与恢复
-- 系统设置：Token、Gist 地址、管理密码、低库存阈值
-
-## 目录结构
-
-```
-.
-├── index.html              # 前台查询页
-├── admin/
-│   └── index.html          # 管理后台页
-├── src/
-│   ├── shared.js           # 共享逻辑（存储、设置、鉴权、分类映射）
-│   ├── front.js            # 前台查询逻辑
-│   └── admin.js            # 后台管理逻辑
-├── styles/
-│   ├── variables.css       # CSS 变量（配色、间距、圆角）
-│   └── components.css      # 组件样式
-├── sw.js                   # Service Worker（离线缓存）
-└── README.md
-```
-
 ## 数据存储
 
 - 元器件数据：`localStorage` 键名 `solder_pm.components.v1`
