@@ -3,6 +3,7 @@ import {
   settingsRead,
   coerceQuantity,
   escapeHtml,
+  safeUrl,
   resolveCategoryKey,
 } from './shared.js';
 
@@ -940,8 +941,9 @@ function renderDetailDialog(item) {
        </div>`
     : '';
 
-  const datasheetHtml = item.datasheet && String(item.datasheet).trim()
-    ? `<a class="btn btn-primary" href="${escapeHtml(item.datasheet)}" target="_blank" rel="noopener noreferrer">
+  const safeDatasheet = safeUrl(item.datasheet);
+  const datasheetHtml = safeDatasheet
+    ? `<a class="btn btn-primary" href="${escapeHtml(safeDatasheet)}" target="_blank" rel="noopener noreferrer">
          <i class="fa-solid fa-file-lines"></i> 查看数据手册
        </a>`
     : '';

@@ -39,6 +39,24 @@ export function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+const SAFE_URL_SCHEMES = ['http:', 'https:', 'mailto:'];
+
+// 对外部可控 URL 做 scheme 白名单校验（仅允许 http/https/mailto），
+// 非法协议（javascript:/data:/vbscript: 等）或无法解析的值返回空字符串。
+export function safeUrl(value) {
+  if (value == null) return '';
+  const raw = String(value).trim();
+  if (!raw) return '';
+  try {
+    // 归一化解析（与浏览器 href 行为一致：剥离换行、补全相对路径）
+    const url = new URL(raw, 'https://local.invalid/');
+    if (!SAFE_URL_SCHEMES.includes(url.protocol)) return '';
+    return raw;
+  } catch {
+    return '';
+  }
+}
+
 export function storageRead() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

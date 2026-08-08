@@ -18,6 +18,7 @@ import {
   generateId,
   nowIso,
   escapeHtml,
+  safeUrl,
   getSortedItems,
   parseImportedText,
   summarizeChanges,
@@ -157,8 +158,9 @@ export function renderDetail() {
 
   const createdAtText = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN') : '-';
   const updatedAtText = item.updatedAt ? new Date(item.updatedAt).toLocaleString('zh-CN') : '-';
-  const datasheetHtml = item.datasheet
-    ? `<a class="link" href="${escapeHtml(item.datasheet)}" target="_blank" rel="noopener noreferrer">打开数据手册</a><div class="field__hint mt-2">${escapeHtml(item.datasheet)}</div>`
+  const safeDatasheet = safeUrl(item.datasheet);
+  const datasheetHtml = safeDatasheet
+    ? `<a class="link" href="${escapeHtml(safeDatasheet)}" target="_blank" rel="noopener noreferrer">打开数据手册</a><div class="field__hint mt-2">${escapeHtml(safeDatasheet)}</div>`
     : `<span class="text-muted">暂无</span>`;
 
   detailEl.innerHTML = `
