@@ -1,9 +1,4 @@
-@import './variables.css';
-@import './base.css';
-@import './layout.css';
-@import './forms.css';
-@import './data.css';
-@import './hub.css';
+/* 样式加载顺序（由页面 <link> 控制）：variables → base → layout → forms → data → hub → components */
 
 /* ==========================================================================
    Buttons
@@ -614,6 +609,10 @@ html.dark .button--primary:hover {
   min-height: 44px;
   justify-content: center;
   padding: 5px 14px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
   text-decoration: none;
   color: var(--text-muted);
   font-size: var(--text-xs);

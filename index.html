@@ -5,10 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SOLDER · 焊接元器件管理系统</title>
   <meta name="description" content="焊接元器件库存管理平台，覆盖入库、出库、预警、统计全流程。" />
+  <link rel="icon" href="data:," />
+  <!-- 在样式应用前同步设置主题，避免暗色用户首屏闪白 -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.classList.toggle('dark', t === 'dark');
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Font Awesome 异步加载：不阻塞首屏渲染 -->
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" /></noscript>
+  <!-- 直接以 link 并行加载全部样式（替代 @import 串行加载） -->
+  <link rel="stylesheet" href="styles/variables.css" />
+  <link rel="stylesheet" href="styles/base.css" />
+  <link rel="stylesheet" href="styles/layout.css" />
+  <link rel="stylesheet" href="styles/forms.css" />
+  <link rel="stylesheet" href="styles/data.css" />
+  <link rel="stylesheet" href="styles/hub.css" />
   <link rel="stylesheet" href="styles/components.css" />
 </head>
 <body class="circuit-bg">
@@ -56,12 +80,12 @@
       <div class="hub-sidebar__footer">
         <div class="stock-indicator">
           <div class="stock-indicator__label">
-            <span>仓库使用率</span>
+            <span>本地存储</span>
             <span class="mono" id="usagePct" style="color: var(--accent);">—</span>
           </div>
           <div class="stock-bar"><div class="stock-bar__fill" id="usageBar" style="width: 0%;"></div></div>
           <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 6px;">
-            <span id="usageUsed">已用 0</span><span id="usageTotal">共 0</span>
+            <span id="usageUsed">数据 —</span><span id="usageTotal">配额约 5 MB</span>
           </div>
         </div>
       </div>
@@ -87,12 +111,28 @@
     </main>
   </div>
 
+  <!-- 移动端底部导航（小屏时侧边栏隐藏，由它接管页面切换） -->
+  <nav class="mobile-nav" id="mobileNav" aria-label="移动端导航">
+    <button type="button" class="mobile-nav__item is-active" data-page="dashboard">
+      <i class="fa-solid fa-gauge-high"></i><span>仪表盘</span>
+    </button>
+    <button type="button" class="mobile-nav__item" data-page="inventory">
+      <i class="fa-solid fa-microchip"></i><span>元器件库</span>
+    </button>
+    <button type="button" class="mobile-nav__item" data-page="alert">
+      <i class="fa-solid fa-triangle-exclamation"></i><span>预警</span>
+    </button>
+    <button type="button" class="mobile-nav__item" data-page="stats">
+      <i class="fa-solid fa-chart-pie"></i><span>统计</span>
+    </button>
+  </nav>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <!-- 元器件详情弹窗 -->
   <dialog class="dialog detail-dialog" id="detailDialog" aria-label="元器件详情">
     <div class="dialog__body detail-dialog__body" id="detailDialogBody"></div>
   </dialog>
-  <script type="module" src="src/front.js?v=20260731"></script>
+  <script type="module" src="src/front.js?v=20260823"></script>
 </body>
 </html>

@@ -22,6 +22,7 @@ import {
   getSortedItems,
   parseImportedText,
   summarizeChanges,
+  STORAGE_WRITE_ERROR_MESSAGE,
 } from '../src/shared.js';
 
 export function renderAdminList() {
@@ -63,17 +64,15 @@ export function renderAdminList() {
       `;
     })
     .join('');
-
-  $$('.list__item').forEach((node) => {
-    node.addEventListener('click', () => selectItem(node.dataset.id));
-  });
+  // 点击事件在 admin.js init 中对 #adminComponentList 做事件委托，无需逐项绑定
 }
 
 export function renderInventory() {
   const tbody = $('#inventoryBody');
   const emptyEl = $('#inventoryEmpty');
   if (!tbody) return;
-  const threshold = Number.isFinite(settingsRead().lowStockThreshold) ? settingsRead().lowStockThreshold : 5;
+  // settingsRead 内部已对阈值做兜底（非法值回退为 5）
+  const threshold = settingsRead().lowStockThreshold;
   const items = getSortedItems(state.items, 'name', 'asc');
 
   if (!items.length) {
@@ -260,9 +259,14 @@ export function upsertItem(payload) {
     updatedAt: nowIso(),
   };
 
-  state.items = state.items.filter((item) => item.id !== next.id);
-  state.items.push(next);
-  storageWrite(state.items);
+  // 先写存储再提交内存状态，写失败时不改动界面数据
+  const nextList = state.items.filter((item) => item.id !== next.id);
+  nextList.push(next);
+  if (!storageWrite(nextList)) {
+    showToast(STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
+    return false;
+  }
+  state.items = nextList;
   refreshFilters();
   renderCategoryDatalist();
   renderPackageDatalist(next.category);
@@ -270,17 +274,22 @@ export function upsertItem(payload) {
   if (state.selectedId === next.id) {
     renderDetail();
   }
+  return true;
 }
 
 export function deleteItem(id) {
   if (!confirm('确定要删除这条元器件记录吗？')) {
     return;
   }
-  state.items = state.items.filter((item) => item.id !== id);
+  const nextList = state.items.filter((item) => item.id !== id);
+  if (!storageWrite(nextList)) {
+    showToast(STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
+    return;
+  }
+  state.items = nextList;
   if (state.selectedId === id) {
     state.selectedId = null;
   }
-  storageWrite(state.items);
   refreshFilters();
   renderAdminList();
   renderDetail();
@@ -392,7 +401,7 @@ export function submitForm(event) {
     showToast(error.message, { duration: 2400 });
     return;
   }
-  upsertItem(payload);
+  if (!upsertItem(payload)) return;
   closeForm();
   showToast('已保存');
 }
@@ -427,16 +436,24 @@ export function submitQuantity(event) {
     return;
   }
 
+  const prevQuantity = item.quantity;
+  const prevUpdatedAt = item.updatedAt;
   if (mode === 'increase') {
-    item.quantity = item.quantity + value;
+    item.quantity = prevQuantity + value;
   } else if (mode === 'decrease') {
-    item.quantity = Math.max(0, item.quantity - value);
+    item.quantity = Math.max(0, prevQuantity - value);
   } else {
     item.quantity = value;
   }
-
   item.updatedAt = nowIso();
-  storageWrite(state.items);
+
+  if (!storageWrite(state.items)) {
+    // 写入失败则回滚内存中的改动
+    item.quantity = prevQuantity;
+    item.updatedAt = prevUpdatedAt;
+    showToast(STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
+    return;
+  }
   refreshFilters();
   renderAdminList();
   renderDetail();
@@ -468,8 +485,11 @@ export function importJson(file) {
         showToast('已取消导入');
         return;
       }
+      if (!storageWrite(remoteItems)) {
+        showToast('导入失败：' + STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
+        return;
+      }
       state.items = remoteItems;
-      storageWrite(state.items);
       refreshFilters();
       renderAdminList();
       renderDetail();

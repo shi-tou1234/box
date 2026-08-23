@@ -1177,7 +1177,8 @@
   .hub-search { width: 180px; }
   .hero__content { flex-direction: column; align-items: flex-start; }
   .hero__stats { gap: var(--space-5); }
-  .hub-content { padding: var(--space-4); }
+  /* 底部有固定移动导航，留出空间避免遮挡内容 */
+  .hub-content { padding: var(--space-4) var(--space-4) 96px; }
 }
 
 @media (max-width: 560px) {

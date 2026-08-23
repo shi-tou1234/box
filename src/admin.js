@@ -35,6 +35,7 @@ import {
   authWritePassword,
   storageRead,
   nowIso,
+  STORAGE_WRITE_ERROR_MESSAGE,
 } from '../src/shared.js';
 
 function bindLoginForm() {
@@ -234,6 +235,13 @@ function init() {
     $$('.inventory-check').forEach((node) => (node.checked = checked));
   });
 
+  // 列表点击：对静态容器做事件委托，避免每次渲染逐项绑定
+  $('#adminComponentList')?.addEventListener('click', (event) => {
+    const node = event.target.closest('.list__item');
+    if (!node) return;
+    selectItem(node.dataset.id);
+  });
+
   $('#batchDeleteBtn')?.addEventListener('click', () => {
     const ids = getSelectedInventoryIds();
     if (!ids.length) {
@@ -243,8 +251,12 @@ function init() {
     if (!confirm(`将删除 ${ids.length} 条库存记录，是否继续？`)) {
       return;
     }
-    state.items = state.items.filter((item) => !ids.includes(item.id));
-    storageWrite(state.items);
+    const nextList = state.items.filter((item) => !ids.includes(item.id));
+    if (!storageWrite(nextList)) {
+      showToast(STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
+      return;
+    }
+    state.items = nextList;
     refreshFilters();
     renderAdminList();
     renderDetail();
@@ -261,13 +273,25 @@ function init() {
     if (!confirm(`将清零 ${ids.length} 条库存记录的数量，是否继续？`)) {
       return;
     }
+    const snapshots = new Map();
     state.items.forEach((item) => {
       if (ids.includes(item.id)) {
+        snapshots.set(item.id, { quantity: item.quantity, updatedAt: item.updatedAt });
         item.quantity = 0;
         item.updatedAt = nowIso();
       }
     });
-    storageWrite(state.items);
+    if (!storageWrite(state.items)) {
+      snapshots.forEach((snap, id) => {
+        const item = state.items.find((it) => it.id === id);
+        if (item) {
+          item.quantity = snap.quantity;
+          item.updatedAt = snap.updatedAt;
+        }
+      });
+      showToast(STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
+      return;
+    }
     refreshFilters();
     renderAdminList();
     renderDetail();

@@ -4,10 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BENCH-01 | 元器件管理后台</title>
+  <link rel="icon" href="data:," />
+  <!-- 与前台一致：在样式应用前同步设置主题，避免首屏闪烁 -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.classList.toggle('dark', t === 'dark');
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- 直接以 link 并行加载全部样式（替代 @import 串行加载） -->
   <link rel="stylesheet" href="../styles/variables.css" />
+  <link rel="stylesheet" href="../styles/base.css" />
+  <link rel="stylesheet" href="../styles/layout.css" />
+  <link rel="stylesheet" href="../styles/forms.css" />
+  <link rel="stylesheet" href="../styles/data.css" />
+  <link rel="stylesheet" href="../styles/hub.css" />
   <link rel="stylesheet" href="../styles/components.css" />
 </head>
 <body>
@@ -379,6 +399,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <input type="file" id="adminImportFile" accept="application/json" hidden />
-  <script type="module" src="../src/admin.js?v=20260731"></script>
+  <script type="module" src="../src/admin.js?v=20260823"></script>
 </body>
 </html>

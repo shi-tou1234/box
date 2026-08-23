@@ -5,6 +5,8 @@ import {
   escapeHtml,
   safeUrl,
   resolveCategoryKey,
+  showToast,
+  STORAGE_KEY,
 } from './shared.js';
 
 /* ==========================================================================
@@ -16,13 +18,20 @@ const state = {
   items: [],
   currentPage: 'dashboard',
   filterCategory: 'all',
-  filterStock: 'all',
   viewMode: 'grid',
   searchText: '',
 };
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+function debounce(fn, wait = 150) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), wait);
+  };
+}
 
 /* --------------------------------------------------------------------------
    类别视觉映射（中文规范类别 → 视觉 key + 颜色 + 标签类）
@@ -63,8 +72,8 @@ function getVisual(category) {
 }
 
 function getThreshold() {
-  const t = settingsRead().lowStockThreshold;
-  return Number.isFinite(t) && t > 0 ? t : 5;
+  // settingsRead 内部已对阈值做兜底（非法值回退为 5）
+  return settingsRead().lowStockThreshold;
 }
 
 /* --------------------------------------------------------------------------
@@ -191,52 +200,6 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleDateString('zh-CN');
 }
 
-function sparkline(data, color) {
-  const w = 60, h = 28;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * w;
-    const y = h - ((d - min) / range) * (h - 4) - 2;
-    return `${x},${y}`;
-  }).join(' ');
-  const lastX = w;
-  const lastY = h - ((data[data.length - 1] - min) / range) * (h - 4) - 2;
-  const gid = 'sp' + Math.random().toString(36).slice(2, 8);
-  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">
-    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${color}" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-    </linearGradient></defs>
-    <polygon points="0,${h} ${points} ${w},${h}" fill="url(#${gid})"/>
-    <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${lastX}" cy="${lastY}" r="2" fill="${color}"/>
-  </svg>`;
-}
-
-function showToast(message, options = {}) {
-  const container = $('#toast');
-  if (!container) return;
-  const isError = options.isError || /失败|错误|Failed/i.test(message);
-  const duration = options.duration ?? (isError ? 6000 : 3000);
-  const existing = Array.from(container.children);
-  while (existing.length >= 5) existing.shift().remove();
-  const item = document.createElement('div');
-  item.className = 'toast__item';
-  if (isError) item.classList.add('toast__item--danger');
-  item.textContent = message;
-  container.appendChild(item);
-  const dismiss = () => {
-    item.classList.add('toast--leave');
-    item.addEventListener('animationend', () => item.remove(), { once: true });
-  };
-  if (options.persistent !== true) setTimeout(dismiss, duration);
-  item.addEventListener('click', () => {
-    if (!item.classList.contains('toast--leave')) dismiss();
-  });
-}
-
 /* --------------------------------------------------------------------------
    衍生数据
 -------------------------------------------------------------------------- */
@@ -245,12 +208,6 @@ function getFilteredItems() {
   return state.items.filter((item) => {
     if (state.filterCategory !== 'all') {
       if (getVisualKey(item.category) !== state.filterCategory) return false;
-    }
-    if (state.filterStock !== 'all') {
-      const threshold = getThreshold();
-      const tier = getStockTier(item.quantity, threshold).level;
-      if (state.filterStock === 'low' && !(tier === 'low' || tier === 'out')) return false;
-      if (state.filterStock === 'ok' && tier !== 'ok' && tier !== 'mid') return false;
     }
     if (text) {
       const hay = [item.name, item.model, item.package, item.location, item.notes, item.category]
@@ -300,28 +257,23 @@ function renderDashboard() {
   const recentCount = getRecentActivities(8).length;
   const threshold = getThreshold();
 
+  // 仅展示真实统计数据，不展示无法从当前快照推导的"趋势"
   const kpis = [
     {
       label: '元器件种类', value: totalTypes, icon: 'fa-cubes', color: 'var(--accent)',
-      bg: 'var(--accent-soft)', trend: 'up', trendText: '本地已录入',
-      spark: [2, 3, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12].slice(-Math.max(4, totalTypes)),
+      bg: 'var(--accent-soft)', sub: `${getUsedCategories().length} 个类别`,
     },
     {
       label: '总库存数量', value: totalStock.toLocaleString(), icon: 'fa-layer-group', color: 'var(--cyan)',
-      bg: 'var(--cyan-soft)', trend: totalStock > 0 ? 'up' : 'warn',
-      trendText: totalStock > 0 ? '库存健康' : '请补充库存',
-      spark: [8, 12, 10, 18, 20, 24, 30, 28, 36, 40, 38, 42],
+      bg: 'var(--cyan-soft)', sub: totalStock > 0 ? '当前库存合计' : '暂无库存记录',
     },
     {
       label: '低库存预警', value: lowStock, icon: 'fa-triangle-exclamation', color: 'var(--danger)',
-      bg: 'var(--danger-soft)', trend: lowStock > 0 ? 'warn' : 'up',
-      trendText: lowStock > 0 ? `阈值 ≤ ${threshold}` : '暂无预警',
-      spark: [1, 2, 1, 3, 2, 4, 3, 5, 4, 3, 4, lowStock],
+      bg: 'var(--danger-soft)', sub: `阈值 ≤ ${threshold}`,
     },
     {
       label: '近期变动', value: recentCount, icon: 'fa-right-left', color: 'var(--success)',
-      bg: 'var(--success-soft)', trend: 'up', trendText: '近期更新记录',
-      spark: [2, 3, 2, 4, 5, 4, 6, 5, 7, 6, 8, recentCount || 1],
+      bg: 'var(--success-soft)', sub: '最近更新的记录',
     },
   ];
 
@@ -357,13 +309,10 @@ function renderDashboard() {
             <div class="kpi-icon" style="background: ${k.bg}; color: ${k.color};">
               <i class="fa-solid ${k.icon}"></i>
             </div>
-            <div class="kpi-spark">${sparkline(k.spark, k.color)}</div>
           </div>
           <div class="kpi-label">${k.label}</div>
           <div class="kpi-value" style="color: ${k.color};">${k.value}</div>
-          <div class="kpi-trend ${k.trend}">
-            <i class="fa-solid fa-arrow-${k.trend === 'up' ? 'up' : k.trend === 'down' ? 'down' : 'right'}"></i> ${k.trendText}
-          </div>
+          <div class="kpi-trend" style="color: var(--text-muted);">${k.sub}</div>
         </div>
       `).join('')}
     </section>
@@ -430,7 +379,7 @@ function renderLowStockTable() {
           ${items.map((item) => {
             const vis = getVisual(item.category);
             return `
-              <tr style="cursor: pointer;" data-detail-id="${escapeHtml(item.id)}">
+              <tr style="cursor: pointer;" tabindex="0" aria-label="查看详情" data-detail-id="${escapeHtml(item.id)}">
                 <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
                 <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
                 <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
@@ -541,13 +490,13 @@ function renderInventoryView() {
   if (state.viewMode === 'grid') {
     view.innerHTML = `
       <div class="component-grid">
-        ${filtered.map((item, i) => {
+        ${filtered.map((item) => {
           const vis = getVisual(item.category);
           const qty = coerceQuantity(item.quantity);
           const tier = getStockTier(qty, threshold);
           const ratio = Math.min(1, qty / Math.max(1, threshold * 3));
           return `
-            <button type="button" class="component-card fade-up" data-detail-id="${escapeHtml(item.id)}" style="animation-delay: ${i * 0.03}s; text-align: left;">
+            <button type="button" class="component-card" data-detail-id="${escapeHtml(item.id)}" style="text-align: left;">
               <div class="card-header">
                 <div style="min-width: 0; flex: 1;">
                   <div class="card-model">${escapeHtml(getPrimaryText(item))}</div>
@@ -592,7 +541,7 @@ function renderInventoryView() {
                 const qty = coerceQuantity(item.quantity);
                 const tier = getStockTier(qty, threshold);
                 return `
-                  <tr style="cursor: pointer;" data-detail-id="${escapeHtml(item.id)}">
+                  <tr style="cursor: pointer;" tabindex="0" aria-label="查看详情" data-detail-id="${escapeHtml(item.id)}">
                     <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
                     <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
                     <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
@@ -644,7 +593,7 @@ function renderAlertPage() {
                   const qty = coerceQuantity(item.quantity);
                   const tier = getStockTier(qty, threshold);
                   return `
-                    <tr style="cursor: pointer;" data-detail-id="${escapeHtml(item.id)}">
+                    <tr style="cursor: pointer;" tabindex="0" aria-label="查看详情" data-detail-id="${escapeHtml(item.id)}">
                       <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
                       <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
                       <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
@@ -760,11 +709,14 @@ function renderCatBars() {
     `;
   }).join('');
 
-  setTimeout(() => {
-    $$('#catBars .cat-bar-fill').forEach((node) => {
-      node.style.width = node.dataset.width;
+  // 双 rAF 确保浏览器先绘制 width:0 的初始状态，触发填充动画
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      $$('#catBars .cat-bar-fill').forEach((node) => {
+        node.style.width = node.dataset.width;
+      });
     });
-  }, 80);
+  });
 }
 
 function renderDonut() {
@@ -830,17 +782,25 @@ function renderDonut() {
    侧边栏 — 仓库使用率
 -------------------------------------------------------------------------- */
 function renderUsage() {
-  const totalStock = state.items.reduce((s, c) => s + coerceQuantity(c.quantity), 0);
-  const capacity = 4000;
-  const pct = Math.min(100, Math.round((totalStock / capacity) * 100));
+  // 展示真实的 localStorage 占用（按常见 5MB 配额估算），不再使用虚构的"仓库容量"
+  const QUOTA_BYTES = 5 * 1024 * 1024;
+  let bytes = 0;
+  try {
+    bytes = new Blob([localStorage.getItem(STORAGE_KEY) || '']).size;
+  } catch {
+    bytes = 0;
+  }
+  const pct = Math.min(100, Math.max(1, Math.round((bytes / QUOTA_BYTES) * 100)));
+  const formatSize = (b) =>
+    b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
   const pctEl = $('#usagePct');
   const barEl = $('#usageBar');
   const usedEl = $('#usageUsed');
   const totalEl = $('#usageTotal');
   if (pctEl) pctEl.textContent = `${pct}%`;
   if (barEl) barEl.style.width = `${pct}%`;
-  if (usedEl) usedEl.textContent = `已用 ${totalStock.toLocaleString()} 位`;
-  if (totalEl) totalEl.textContent = `共 ${capacity.toLocaleString()} 位`;
+  if (usedEl) usedEl.textContent = `数据 ${formatSize(bytes)}`;
+  if (totalEl) totalEl.textContent = '配额约 5 MB';
 
   const badge = $('#alertBadge');
   const lowCount = getLowStockItems().length;
@@ -876,22 +836,20 @@ function switchPage(page) {
   else if (page === 'stats') html = renderStatsPage();
   else html = renderPlaceholder(t);
 
+  // innerHTML 是同步的，直接渲染即可，无需 setTimeout 延迟
   $('#content').innerHTML = html;
 
   if (page === 'dashboard' || page === 'stats') {
-    setTimeout(() => { renderCatBars(); renderDonut(); bindChartToggles(); }, 50);
+    renderCatBars();
+    renderDonut();
+    bindChartToggles();
   }
   if (page === 'inventory') {
-    setTimeout(() => {
-      renderInventoryView();
-      bindInventoryControls();
-      bindDetailTriggers();
-    }, 50);
-  } else {
-    setTimeout(bindDetailTriggers, 50);
+    renderInventoryView();
+    bindInventoryControls();
   }
 
-  $$('.hub-nav__item[data-page]').forEach((node) => {
+  $$('.hub-nav__item[data-page], .mobile-nav__item[data-page]').forEach((node) => {
     node.classList.toggle('is-active', node.dataset.page === page);
   });
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1016,16 +974,7 @@ function openDetailDialog(id) {
   $('#detailCloseBtn')?.addEventListener('click', () => dialog.close());
 }
 
-function bindDetailTriggers() {
-  $$('#content [data-detail-id]').forEach((el) => {
-    el.addEventListener('click', (e) => {
-      // 避免内部按钮（如数据手册链接）触发
-      if (e.target.closest('a, button:not([data-detail-id])')) return;
-      const id = el.dataset.detailId;
-      if (id) openDetailDialog(id);
-    });
-  });
-}
+/* 详情弹窗的打开事件在 init 中对 #content 做一次性委托（含表格行键盘可达） */
 
 function renderPlaceholder(title) {
   return `
@@ -1038,7 +987,6 @@ function renderPlaceholder(title) {
 }
 
 function bindChartToggles() {
-  $$('#catBars').forEach(() => {});
   $$('.hub-panel__header .chip[data-metric]').forEach((chip) => {
     chip.addEventListener('click', () => {
       $$('.hub-panel__header .chip[data-metric]').forEach((c) => c.classList.remove('is-active'));
@@ -1056,7 +1004,6 @@ function bindInventoryControls() {
       chip.classList.add('is-active');
       state.filterCategory = chip.dataset.cat;
       renderInventoryView();
-      bindDetailTriggers();
     });
   });
   $$('.view-toggle button').forEach((btn) => {
@@ -1065,16 +1012,15 @@ function bindInventoryControls() {
       btn.classList.add('is-active');
       state.viewMode = btn.dataset.view;
       renderInventoryView();
-      bindDetailTriggers();
     });
   });
   const invSearch = $('#invSearch');
   if (invSearch) {
-    invSearch.addEventListener('input', (e) => {
-      state.searchText = e.target.value;
+    const runSearch = debounce((value) => {
+      state.searchText = value;
       renderInventoryView();
-      bindDetailTriggers();
     });
+    invSearch.addEventListener('input', (e) => runSearch(e.target.value));
   }
 }
 
@@ -1122,10 +1068,8 @@ function init() {
   renderUsage();
   switchPage('dashboard');
 
-  window.showToast = showToast;
-
-  // 侧边栏导航
-  $$('.hub-nav__item[data-page]').forEach((item) => {
+  // 侧边栏 + 移动端底部导航
+  $$('.hub-nav__item[data-page], .mobile-nav__item[data-page]').forEach((item) => {
     item.addEventListener('click', () => switchPage(item.dataset.page));
   });
 
@@ -1140,6 +1084,22 @@ function init() {
     }
   });
 
+  // 详情弹窗打开：对 #content 做一次性事件委托，避免每次渲染重新绑定
+  $('#content').addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-detail-id]');
+    if (!trigger) return;
+    // 避免内部按钮/链接（如数据手册）触发
+    if (event.target.closest('a, button:not([data-detail-id])')) return;
+    openDetailDialog(trigger.dataset.detailId);
+  });
+  $('#content').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const trigger = event.target.closest('tr[data-detail-id]');
+    if (!trigger) return;
+    event.preventDefault();
+    openDetailDialog(trigger.dataset.detailId);
+  });
+
   // 主题切换
   $('#themeBtn')?.addEventListener('click', toggleTheme);
   $('#themeBtnTop')?.addEventListener('click', toggleTheme);
@@ -1152,25 +1112,23 @@ function init() {
     }
   });
 
-  // 全局搜索：在元器件库页同步筛选，其它页跳转到元器件库
-  $('#globalSearch').addEventListener('input', (e) => {
-    state.searchText = e.target.value;
+  // 全局搜索：在元器件库页同步筛选，其它页跳转到元器件库（防抖减少重渲染）
+  const runGlobalSearch = debounce((value) => {
+    state.searchText = value;
     if (state.currentPage !== 'inventory') {
       state.filterCategory = 'all';
       switchPage('inventory');
-      setTimeout(() => {
-        const invSearch = $('#invSearch');
-        if (invSearch) invSearch.value = e.target.value;
-      }, 60);
+      const invSearch = $('#invSearch');
+      if (invSearch) invSearch.value = value;
     } else {
       const invSearch = $('#invSearch');
-      if (invSearch && invSearch.value !== e.target.value) {
-        invSearch.value = e.target.value;
+      if (invSearch && invSearch.value !== value) {
+        invSearch.value = value;
       }
       renderInventoryView();
-      bindDetailTriggers();
     }
   });
+  $('#globalSearch').addEventListener('input', (e) => runGlobalSearch(e.target.value));
 
   // 详情弹窗：点击背景关闭
   $('#detailDialog')?.addEventListener('click', (e) => {

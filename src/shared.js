@@ -74,29 +74,63 @@ export function storageRead() {
   }
 }
 
+// 写入失败（如存储配额已满）返回 false，由调用方决定如何提示与回滚
 export function storageWrite(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    return true;
+  } catch (error) {
+    console.error('保存数据失败', error);
+    return false;
+  }
 }
 
 export function settingsRead() {
+  const fallback = { token: '', gistUrl: '', lowStockThreshold: 5 };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return { token: '', gistUrl: '', lowStockThreshold: 5 };
+    if (!raw) return fallback;
     const data = JSON.parse(raw);
+    const threshold = Number(data.lowStockThreshold);
     return {
       token: String(data.token || ''),
       gistUrl: String(data.gistUrl || ''),
-      lowStockThreshold: Number(data.lowStockThreshold),
+      lowStockThreshold: Number.isFinite(threshold) ? Math.max(0, Math.trunc(threshold)) : 5,
     };
   } catch (error) {
     console.error('读取设置失败', error);
-    return { token: '', gistUrl: '', lowStockThreshold: 5 };
+    return fallback;
   }
 }
 
 export function settingsWrite(value) {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(value));
 }
+
+/* 前台与后台共用的轻提示（容器为各页面里的 #toast） */
+export function showToast(message, options = {}) {
+  const container = document.querySelector('#toast');
+  if (!container) return;
+  const isError = options.isError || /失败|错误|Failed/i.test(message);
+  const duration = options.duration ?? (isError ? 6000 : 3000);
+  const existing = Array.from(container.children);
+  while (existing.length >= 5) existing.shift().remove();
+  const item = document.createElement('div');
+  item.className = 'toast__item';
+  if (isError) item.classList.add('toast__item--danger');
+  item.textContent = message;
+  container.appendChild(item);
+  const dismiss = () => {
+    item.classList.add('toast--leave');
+    item.addEventListener('animationend', () => item.remove(), { once: true });
+  };
+  if (options.persistent !== true) setTimeout(dismiss, duration);
+  item.addEventListener('click', () => {
+    if (!item.classList.contains('toast--leave')) dismiss();
+  });
+}
+
+export const STORAGE_WRITE_ERROR_MESSAGE = '保存失败：浏览器本地存储不可用或已满，更改未保存';
 
 /* ── 认证系统：PBKDF2-SHA256 ──────────────────────────────
  * 参考 blog 项目方案，使用 Web Crypto API 实现密码哈希。

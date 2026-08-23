@@ -13,6 +13,7 @@ import {
   getCategoryOptions,
   getPackageSuggestions,
 } from '../src/shared.js';
+import { showToast } from '../src/shared.js';
 
 export {
   authReadPassword,
@@ -22,6 +23,9 @@ export {
   authLogout,
   authClear,
 } from '../src/shared.js';
+
+// 供 admin-render / admin-sync 复用（实现在 shared.js）
+export { showToast };
 
 export const state = {
   items: [],
@@ -45,7 +49,12 @@ export function formatLastSync(iso) {
   const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60000);
   if (minutes < 1) return '最后同步：刚刚';
-  return `最后同步：${minutes} 分钟前`;
+  if (minutes < 60) return `最后同步：${minutes} 分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `最后同步：${hours} 小时前`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `最后同步：${days} 天前`;
+  return `最后同步：${date.toLocaleDateString('zh-CN')}`;
 }
 
 export function readSettingsLastSync() {
@@ -56,39 +65,6 @@ export function readSettingsLastSync() {
   } catch {
     return '';
   }
-}
-
-export function showToast(message, options = {}) {
-  const container = $('#toast');
-  if (!container) return;
-
-  const isError = options.isError || /失败|错误|Failed/i.test(message);
-  const duration = options.duration ?? (isError ? 6000 : 3000);
-
-  const existing = Array.from(container.children);
-  const MAX_TOASTS = 5;
-  while (existing.length >= MAX_TOASTS) {
-    existing.shift().remove();
-  }
-
-  const item = document.createElement('div');
-  item.className = 'toast__item';
-  if (isError) item.classList.add('toast__item--danger');
-  item.textContent = message;
-  container.appendChild(item);
-
-  const dismiss = () => {
-    item.classList.add('toast--leave');
-    item.addEventListener('animationend', () => item.remove(), { once: true });
-  };
-
-  if (options.persistent !== true) {
-    setTimeout(dismiss, duration);
-  }
-
-  item.addEventListener('click', () => {
-    if (!item.classList.contains('toast--leave')) dismiss();
-  });
 }
 
 export function getFilteredItems() {
@@ -124,12 +100,18 @@ export function refreshFilters() {
   const stockSelect = $('#filterStock');
   if (!categorySelect || !packageSelect) return;
 
+  // 重建选项前记住当前选择，避免数据变更后筛选被静默重置为"全部"
+  const prevCategory = categorySelect.value;
+  const prevPackage = packageSelect.value;
+
   const categories = getUniqueValues('category');
   const packages = getUniqueValues('package');
 
   categorySelect.innerHTML = '<option value="">全部</option>' + categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
   packageSelect.innerHTML = '<option value="">全部</option>' + packages.map((pkg) => `<option value="${escapeHtml(pkg)}">${escapeHtml(pkg)}</option>`).join('');
 
+  categorySelect.value = categories.includes(prevCategory) ? prevCategory : '';
+  packageSelect.value = packages.includes(prevPackage) ? prevPackage : '';
   state.filterCategory = categorySelect.value;
   state.filterPackage = packageSelect.value;
   state.filterStock = stockSelect ? stockSelect.value : 'all';
@@ -154,8 +136,8 @@ export function renderPackageDatalist(category = '') {
 export function getStockStatus(item) {
   const q = coerceQuantity(item.quantity);
   if (q <= 0) return 'out-of-stock';
-  const threshold = Number.isFinite(settingsRead().lowStockThreshold) ? settingsRead().lowStockThreshold : 5;
-  if (q <= threshold) return 'low-stock';
+  // settingsRead 内部已对阈值做兜底（非法值回退为 5）
+  if (q <= settingsRead().lowStockThreshold) return 'low-stock';
   return 'in-stock';
 }
 

@@ -11,6 +11,7 @@ import {
   summarizeChanges,
   nowIso,
   escapeHtml,
+  STORAGE_WRITE_ERROR_MESSAGE,
 } from '../src/shared.js';
 
 import {
@@ -22,8 +23,36 @@ import {
 
 export function normalizeGistUrl(url) {
   if (!url) return '';
-  const match = String(url).match(/gist\.github\.com\/([^/]+\/[^/?#]+)/);
-  return match ? `https://gist.github.com/${match[1]}` : String(url).trim();
+  const raw = String(url).trim();
+  try {
+    const parsed = new URL(raw);
+    if (parsed.hostname !== 'gist.github.com') return '';
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (segments.length < 2) return '';
+    return `https://gist.github.com/${segments[0]}/${segments[1]}`;
+  } catch {
+    return '';
+  }
+}
+
+const GITHUB_TIMEOUT_MS = 20000;
+
+// 带超时的 fetch：网络挂起时不再让同步按钮永久停留在禁用态
+function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GITHUB_TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+async function fetchOrThrow(url, options = {}) {
+  try {
+    return await fetchWithTimeout(url, options);
+  } catch (error) {
+    if (error && error.name === 'AbortError') {
+      throw new Error(`请求超时（${Math.round(GITHUB_TIMEOUT_MS / 1000)} 秒），请检查网络连接`);
+    }
+    throw new Error('网络请求失败，请检查网络连接');
+  }
 }
 
 export async function githubRequest(path, options = {}) {
@@ -32,7 +61,7 @@ export async function githubRequest(path, options = {}) {
   if (!token) {
     throw new Error('请先在设置中填写 GitHub Token');
   }
-  const response = await fetch(`https://api.github.com${path}`, {
+  const response = await fetchOrThrow(`https://api.github.com${path}`, {
     ...options,
     headers: {
       Accept: 'application/vnd.github+json',
@@ -64,26 +93,36 @@ export async function findGistFile(gist, filename = 'components.json') {
   return file || null;
 }
 
+// 解析 Gist 中的元器件 JSON，内容非法时给出可读的中文报错
+function parseGistComponents(text) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('Gist 文件内容不是有效的 JSON');
+  }
+  if (!Array.isArray(data)) {
+    throw new Error('Gist 数据格式不正确，需要是 JSON 数组');
+  }
+  return data.map((item) => ({
+    ...item,
+    quantity: Number.isFinite(item.quantity) ? Math.max(0, Math.trunc(item.quantity)) : 0,
+  }));
+}
+
 export async function readGistContent(gist, filename = 'components.json') {
   const file = await findGistFile(gist, filename);
   if (!file || typeof file.content === 'undefined') {
     return [];
   }
   if (file.truncated && file.raw_url) {
-    const response = await fetch(file.raw_url);
+    const response = await fetchOrThrow(file.raw_url);
     if (!response.ok) {
       throw new Error('读取 Gist 文件内容失败');
     }
-    const text = await response.text();
-    return JSON.parse(text).map((item) => ({
-      ...item,
-      quantity: Number.isFinite(item.quantity) ? Math.max(0, Math.trunc(item.quantity)) : 0,
-    }));
+    return parseGistComponents(await response.text());
   }
-  return JSON.parse(file.content).map((item) => ({
-    ...item,
-    quantity: Number.isFinite(item.quantity) ? Math.max(0, Math.trunc(item.quantity)) : 0,
-  }));
+  return parseGistComponents(file.content);
 }
 
 export async function syncFromGist() {
@@ -110,8 +149,11 @@ export async function syncFromGist() {
       return;
     }
 
+    if (!storageWrite(remoteItems)) {
+      showToast('恢复失败：' + STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
+      return;
+    }
     state.items = remoteItems;
-    storageWrite(state.items);
     settingsWrite({ ...currentSettings, gistUrl, lastSyncAt: nowIso() });
     refreshFilters();
     renderAdminList();
