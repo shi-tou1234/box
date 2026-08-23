@@ -1,0 +1,15 @@
+# 工具生成的本地状态目录
+.mimosa/
+.trae/
+
+# 系统与编辑器杂项
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+*.tmp
+*.bak
+
+# 依赖与构建产物（如未来引入）
+node_modules/
+dist/
