@@ -324,6 +324,11 @@ function renderActivityList() {
 /* --------------------------------------------------------------------------
    元器件库
 -------------------------------------------------------------------------- */
+function renderInventory() {
+  const total = state.items.length;
+  const cats = getUsedCategories();
+
+  return `
     <div class="fade-up" style="margin-bottom: var(--space-5);">
       <div class="hero" style="padding: 22px 28px;">
         <div class="hero__content">
