@@ -8,6 +8,7 @@ import {
   getStockStatus,
   formatLastSync,
   readSettingsLastSync,
+  refreshFilters,
   renderCategoryDatalist,
   renderPackageDatalist,
 } from './admin-state.js';

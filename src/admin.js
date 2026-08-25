@@ -26,6 +26,7 @@ import {
   renderDetail,
   renderInventory,
   renderSyncStatus,
+  selectItem,
 } from './admin-render.js';
 import { syncToGist, syncFromGist } from './admin-sync.js';
 import {
