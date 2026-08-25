@@ -32,6 +32,7 @@ import { syncToGist, syncFromGist } from './admin-sync.js';
 import {
   settingsRead,
   settingsWrite,
+  storageWrite,
   authReadPassword,
   authWritePassword,
   storageRead,
