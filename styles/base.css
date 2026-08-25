@@ -130,6 +130,11 @@ button {
   display: none !important;
 }
 
+/* 防止组件自身的 display 声明（如 .field__error 的 display:flex）覆盖 hidden 属性 */
+[hidden] {
+  display: none !important;
+}
+
 .flex {
   display: flex;
 }
