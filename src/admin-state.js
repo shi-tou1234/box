@@ -7,7 +7,6 @@ import {
   authIsLoggedIn,
   authLogin,
   authLogout,
-  coerceQuantity,
   escapeHtml,
   getSortedItems,
   getCategoryOptions,
@@ -33,7 +32,6 @@ export const state = {
   filterText: '',
   filterCategory: '',
   filterPackage: '',
-  filterStock: 'all',
   sortKey: 'updatedAt',
   sortDirection: 'desc',
   syncLoading: false,
@@ -71,20 +69,14 @@ export function getFilteredItems() {
   const text = state.filterText.trim().toLowerCase();
   const category = state.filterCategory.trim();
   const pkg = state.filterPackage.trim();
-  const stockMode = state.filterStock;
 
   return getSortedItems(state.items, state.sortKey, state.sortDirection).filter((item) => {
     const matchText =
       !text ||
-      (item.name || '').toLowerCase().includes(text) ||
-      (item.model || '').toLowerCase().includes(text);
+      (item.name || '').toLowerCase().includes(text);
     const matchCategory = !category || item.category === category;
     const matchPackage = !pkg || item.package === pkg;
-    const matchStock =
-      stockMode === 'all' ||
-      (stockMode === 'in' && item.quantity > 0) ||
-      (stockMode === 'out' && item.quantity <= 0);
-    return matchText && matchCategory && matchPackage && matchStock;
+    return matchText && matchCategory && matchPackage;
   });
 }
 
@@ -97,7 +89,6 @@ export function refreshFilters() {
   const searchInput = $('#adminSearch');
   const categorySelect = $('#filterCategory');
   const packageSelect = $('#filterPackage');
-  const stockSelect = $('#filterStock');
   if (!categorySelect || !packageSelect) return;
 
   // 重建选项前记住当前选择，避免数据变更后筛选被静默重置为"全部"
@@ -114,7 +105,6 @@ export function refreshFilters() {
   packageSelect.value = packages.includes(prevPackage) ? prevPackage : '';
   state.filterCategory = categorySelect.value;
   state.filterPackage = packageSelect.value;
-  state.filterStock = stockSelect ? stockSelect.value : 'all';
   state.filterText = searchInput ? searchInput.value : '';
 }
 
@@ -131,14 +121,6 @@ export function renderPackageDatalist(category = '') {
   const suggestions = getPackageSuggestions(category);
   const options = Array.from(new Set(suggestions.concat(getUniqueValues('package')))).sort((a, b) => a.localeCompare(b, 'zh'));
   datalist.innerHTML = options.map((option) => `<option value="${escapeHtml(option)}"></option>`).join('');
-}
-
-export function getStockStatus(item) {
-  const q = coerceQuantity(item.quantity);
-  if (q <= 0) return 'out-of-stock';
-  // settingsRead 内部已对阈值做兜底（非法值回退为 5）
-  if (q <= settingsRead().lowStockThreshold) return 'low-stock';
-  return 'in-stock';
 }
 
 export function getSelectedInventoryIds() {

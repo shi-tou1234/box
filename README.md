@@ -5,11 +5,10 @@
 ## 功能特性
 
 ### 前台查询页（`/`）
-- 关键字搜索（名称、型号、封装、位置、备注）
+- 关键字搜索（名称、封装、位置、备注）
 - 按种类筛选 + 网格 / 表格双视图
-- 仪表盘统计卡片：元器件种类、总库存、低库存预警、近期变动
+- 仪表盘统计卡片：元器件种类、近期变动
 - 分类分布条形图、封装类型占比环形图
-- 库存状态指示（充足 / 偏低 / 不足 / 缺货）
 - 点击条目查看详情弹窗，支持数据手册链接跳转
 - 明暗主题切换，跟随系统偏好
 - 移动端底部导航
@@ -19,7 +18,7 @@
 - 元器件数据：`localStorage` 键名 `solder_pm.components.v1`
 - 应用设置：`localStorage` 键名 `solder_pm.settings.v1`
 - 鉴权状态：`sessionStorage` 键名 `solder_pm.admin_ok`
-- 数据格式：JSON 数组，字段包含 `name / category / model / package / quantity / location / datasheet / notes / createdAt / updatedAt`
+- 数据格式：JSON 数组，字段包含 `name / category / package / location / datasheet / notes / createdAt / updatedAt`
 
 数据仅保存在本地浏览器，不会上传到任何第三方服务（Gist 同步需自行配置 Token）。
 
@@ -47,9 +46,8 @@ python -m http.server 8000
 1. 打开前台 `/` 查询元器件
 2. 首次进入 `/admin/` 时设置管理密码（密码仅存本地）
 3. 在管理后台「元器件」标签新增、编辑或导入数据
-4. 在「库存」标签批量管理数量与状态
-5. 在「同步」标签配置 GitHub Token 和 Gist 地址，实现跨设备备份
-6. 在「设置」标签调整低库存阈值等参数
+4. 在「同步」标签配置 GitHub Token 和 Gist 地址，实现跨设备备份
+5. 在「设置」标签维护管理密码
 
 ## 技术栈
 
@@ -64,9 +62,7 @@ python -m http.server 8000
 | --- | --- | --- |
 | name | string | 名称（必填） |
 | category | string | 种类（必填，支持电阻、电容、MCU 等） |
-| model | string | 型号 |
 | package | string | 封装（0805、SOT-23 等） |
-| quantity | number | 数量（非负整数） |
 | location | string | 位置/库位 |
 | datasheet | string | 数据手册链接 |
 | notes | string | 备注 |

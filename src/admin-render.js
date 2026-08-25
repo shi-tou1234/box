@@ -5,7 +5,6 @@ import {
   showToast,
   getFilteredItems,
   getUniqueValues,
-  getStockStatus,
   formatLastSync,
   readSettingsLastSync,
   refreshFilters,
@@ -15,7 +14,6 @@ import {
 import {
   storageWrite,
   settingsRead,
-  coerceQuantity,
   generateId,
   nowIso,
   escapeHtml,
@@ -48,18 +46,14 @@ export function renderAdminList() {
   listEl.innerHTML = items
     .map((item) => {
       const activeClass = item.id === state.selectedId ? 'is-active' : '';
-      const statusClass = getStockStatus(item);
-      const statusLabel = statusClass === 'in-stock' ? '有货' : statusClass === 'low-stock' ? '低库存' : '缺货';
       return `
         <button type="button" class="list__item ${activeClass}" data-id="${escapeHtml(item.id)}">
-          <span class="status-dot status-dot--${statusClass}" title="${statusLabel}"></span>
           <span class="list__primary">
             <span class="list__name">${escapeHtml(item.name || '未命名')}</span>
-            <span class="list__meta">${escapeHtml([item.category, item.model, item.package].filter(Boolean).join(' / ') || '暂无完整信息')}</span>
+            <span class="list__meta">${escapeHtml([item.category, item.package].filter(Boolean).join(' / ') || '暂无完整信息')}</span>
           </span>
           <span class="list__badges">
             <span class="badge badge--accent">${escapeHtml(item.category || '未分类')}</span>
-            <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--muted'}">${coerceQuantity(item.quantity)}</span>
           </span>
         </button>
       `;
@@ -72,8 +66,6 @@ export function renderInventory() {
   const tbody = $('#inventoryBody');
   const emptyEl = $('#inventoryEmpty');
   if (!tbody) return;
-  // settingsRead 内部已对阈值做兜底（非法值回退为 5）
-  const threshold = settingsRead().lowStockThreshold;
   const items = getSortedItems(state.items, 'name', 'asc');
 
   if (!items.length) {
@@ -85,20 +77,13 @@ export function renderInventory() {
   emptyEl?.classList.add('hidden');
   tbody.innerHTML = items
     .map((item) => {
-      const quantity = coerceQuantity(item.quantity);
-      const isLow = quantity > 0 && quantity <= threshold;
-      const statusText = quantity <= 0 ? '缺货' : isLow ? '低库存' : '正常';
-      const statusClass = quantity <= 0 ? 'text-danger' : isLow ? 'text-warning' : 'text-muted';
       return `
         <tr>
           <td><input type="checkbox" class="inventory-check" value="${escapeHtml(item.id)}" /></td>
           <td>${escapeHtml(item.name || '-')}</td>
           <td>${escapeHtml(item.category || '-')}</td>
-          <td>${escapeHtml(item.model || '-')}</td>
           <td>${escapeHtml(item.package || '-')}</td>
-          <td>${quantity}</td>
           <td>${escapeHtml(item.location || '-')}</td>
-          <td class="${statusClass}">${statusText}</td>
         </tr>
       `;
     })
@@ -175,18 +160,8 @@ export function renderDetail() {
           <div class="mono">${escapeHtml(item.category || '-')}</div>
         </div>
         <div class="field">
-          <div class="field__label">型号</div>
-          <div class="mono">${escapeHtml(item.model || '-')}</div>
-        </div>
-        <div class="field">
           <div class="field__label">封装</div>
           <div class="mono">${escapeHtml(item.package || '-')}</div>
-        </div>
-        <div class="field">
-          <div class="field__label">当前数量</div>
-          <div>
-            <span class="badge ${item.quantity <= 0 ? 'badge--danger' : 'badge--accent'}">${coerceQuantity(item.quantity)}</span>
-          </div>
         </div>
         <div class="field">
           <div class="field__label">位置/库位</div>
@@ -217,7 +192,6 @@ export function renderDetail() {
 function bindDetailActions() {
   const editBtn = $('#editBtn');
   const copyBtn = $('#copyBtn');
-  const quantityBtn = $('#quantityBtn');
   const deleteBtn = $('#detailDeleteBtn');
 
   editBtn?.addEventListener('click', () => {
@@ -229,11 +203,6 @@ function bindDetailActions() {
     const item = state.items.find((entry) => entry.id === state.selectedId);
     if (!item) return;
     duplicateItem(item);
-  });
-  quantityBtn?.addEventListener('click', () => {
-    const item = state.items.find((entry) => entry.id === state.selectedId);
-    if (!item) return;
-    openQuantityDialog(item);
   });
   deleteBtn?.addEventListener('click', () => {
     const item = state.items.find((entry) => entry.id === state.selectedId);
@@ -315,9 +284,7 @@ export function resetForm(item = null) {
   $('#formId').value = item ? item.id : '';
   $('#formName').value = item ? item.name || '' : '';
   $('#formCategory').value = item ? item.category || '' : '';
-  $('#formModel').value = item ? item.model || '' : '';
   $('#formPackage').value = item ? item.package || '' : '';
-  $('#formQuantity').value = item ? (item.quantity || 0) : 0;
   $('#formLocation').value = item ? item.location || '' : '';
   $('#formDatasheet').value = item ? item.datasheet || '' : '';
   $('#formNotes').value = item ? item.notes || '' : '';
@@ -328,9 +295,7 @@ export function readForm() {
     id: $('#formId').value || undefined,
     name: $('#formName').value.trim(),
     category: $('#formCategory').value.trim(),
-    model: $('#formModel').value.trim(),
     package: $('#formPackage').value.trim(),
-    quantity: $('#formQuantity').value,
     location: $('#formLocation').value.trim(),
     datasheet: $('#formDatasheet').value.trim(),
     notes: $('#formNotes').value.trim(),
@@ -359,12 +324,10 @@ export function clearFormValidation() {
     const input = $(`#${id}`);
     if (input) input.classList.remove('is-invalid');
   });
-  ['formNameError', 'formCategoryError', 'quantityValueError'].forEach((id) => {
+  ['formNameError', 'formCategoryError'].forEach((id) => {
     const errorEl = $(`#${id}`);
     if (errorEl) errorEl.hidden = true;
   });
-  const quantityInput = $('#quantityValue');
-  if (quantityInput) quantityInput.classList.remove('is-invalid');
 }
 
 export function validateForm(payload) {
@@ -405,62 +368,6 @@ export function submitForm(event) {
   if (!upsertItem(payload)) return;
   closeForm();
   showToast('已保存');
-}
-
-export function openQuantityDialog(item) {
-  if (!item) return;
-  $('#quantityId').value = item.id;
-  $('#quantityMode').value = 'increase';
-  $('#quantityValue').value = '1';
-  clearFormValidation();
-  $('#quantityDialog').showModal();
-}
-
-export function closeQuantityDialog() {
-  $('#quantityDialog').close();
-}
-
-export function submitQuantity(event) {
-  event.preventDefault();
-  const id = $('#quantityId').value;
-  const item = state.items.find((entry) => entry.id === id);
-  const mode = $('#quantityMode').value;
-  const value = coerceQuantity($('#quantityValue').value);
-
-  if (!id || !item) {
-    showToast('请先选择一个元器件');
-    return;
-  }
-  if (value <= 0 && mode !== 'set') {
-    markFieldInvalid('quantityValue', 'quantityValueError', '数量必须大于 0');
-    showToast('数量必须大于 0');
-    return;
-  }
-
-  const prevQuantity = item.quantity;
-  const prevUpdatedAt = item.updatedAt;
-  if (mode === 'increase') {
-    item.quantity = prevQuantity + value;
-  } else if (mode === 'decrease') {
-    item.quantity = Math.max(0, prevQuantity - value);
-  } else {
-    item.quantity = value;
-  }
-  item.updatedAt = nowIso();
-
-  if (!storageWrite(state.items)) {
-    // 写入失败则回滚内存中的改动
-    item.quantity = prevQuantity;
-    item.updatedAt = prevUpdatedAt;
-    showToast(STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
-    return;
-  }
-  refreshFilters();
-  renderAdminList();
-  renderDetail();
-  renderInventory();
-  closeQuantityDialog();
-  showToast('数量已更新');
 }
 
 export function exportJson() {

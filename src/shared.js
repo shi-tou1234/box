@@ -6,20 +6,13 @@ export const emptyState = {
   id: null,
   name: '',
   category: '',
-  model: '',
   package: '',
-  quantity: 0,
   location: '',
   datasheet: '',
   notes: '',
   createdAt: null,
   updatedAt: null,
 };
-
-export function coerceQuantity(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.max(0, Math.trunc(number)) : 0;
-}
 
 export function generateId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -66,7 +59,6 @@ export function storageRead() {
     return data.map((item) => ({
       ...emptyState,
       ...item,
-      quantity: coerceQuantity(item.quantity),
     }));
   } catch (error) {
     console.error('读取本地数据失败', error);
@@ -86,16 +78,14 @@ export function storageWrite(items) {
 }
 
 export function settingsRead() {
-  const fallback = { token: '', gistUrl: '', lowStockThreshold: 5 };
+  const fallback = { token: '', gistUrl: '' };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return fallback;
     const data = JSON.parse(raw);
-    const threshold = Number(data.lowStockThreshold);
     return {
       token: String(data.token || ''),
       gistUrl: String(data.gistUrl || ''),
-      lowStockThreshold: Number.isFinite(threshold) ? Math.max(0, Math.trunc(threshold)) : 5,
     };
   } catch (error) {
     console.error('读取设置失败', error);
@@ -277,13 +267,8 @@ export function summarizeChanges(base, target) {
 export function getSortedItems(items, sortKey, sortDirection) {
   const sorted = items.slice();
   sorted.sort((a, b) => {
-    const quantityA = coerceQuantity(a.quantity);
-    const quantityB = coerceQuantity(b.quantity);
     if (sortKey === 'name') {
       return sortDirection === 'asc' ? a.name.localeCompare(b.name, 'zh') : b.name.localeCompare(a.name, 'zh');
-    }
-    if (sortKey === 'quantity') {
-      return sortDirection === 'asc' ? quantityA - quantityB : quantityB - quantityA;
     }
     const timeA = a.updatedAt || a.createdAt || '';
     const timeB = b.updatedAt || b.createdAt || '';
@@ -300,7 +285,6 @@ export function parseImportedText(text) {
   return data.map((item) => ({
     ...emptyState,
     ...item,
-    quantity: coerceQuantity(item.quantity),
   }));
 }
 

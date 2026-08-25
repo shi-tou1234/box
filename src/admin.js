@@ -17,8 +17,6 @@ import {
   openForm,
   closeForm,
   submitForm,
-  closeQuantityDialog,
-  submitQuantity,
   exportJson,
   importJson,
   renderSettings,
@@ -122,10 +120,8 @@ function showAdminPanel(panelId) {
     const current = settingsRead();
     const tokenInput = $('#adminGithubToken');
     const gistInput = $('#adminGistUrl');
-    const thresholdInput = $('#lowStockThreshold');
     if (tokenInput) tokenInput.value = current.token;
     if (gistInput) gistInput.value = current.gistUrl;
-    if (thresholdInput) thresholdInput.value = current.lowStockThreshold;
     renderSettings();
   }
 }
@@ -162,11 +158,6 @@ function init() {
     renderAdminList();
   });
 
-  $('#filterStock')?.addEventListener('change', (event) => {
-    state.filterStock = event.target.value;
-    renderAdminList();
-  });
-
   $('#adminNewBtn')?.addEventListener('click', () => openForm());
   $('#closeFormBtn')?.addEventListener('click', closeForm);
   $('#cancelFormBtn')?.addEventListener('click', closeForm);
@@ -176,13 +167,6 @@ function init() {
     if (event.target === $('#formDialog')) closeForm();
   });
 
-  $('#quantityDialog')?.addEventListener('click', (event) => {
-    if (event.target === $('#quantityDialog')) closeQuantityDialog();
-  });
-  $('#closeQuantityBtn')?.addEventListener('click', closeQuantityDialog);
-  $('#cancelQuantityBtn')?.addEventListener('click', closeQuantityDialog);
-  $('#quantityForm')?.addEventListener('submit', submitQuantity);
-
   $('#adminSettingsForm')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     try {
@@ -190,13 +174,11 @@ function init() {
       const gistUrl = $('#adminGistUrl').value.trim();
       const oldPassword = $('#adminOldPassword').value || '';
       const newPassword = $('#adminPassword').value || '';
-      const lowStockThreshold = Number($('#lowStockThreshold').value);
       const current = settingsRead();
       settingsWrite({
         ...current,
         token,
         gistUrl,
-        lowStockThreshold: Number.isFinite(lowStockThreshold) ? Math.max(0, lowStockThreshold) : 5,
         lastSyncAt: readSettingsLastSync(),
       });
 
@@ -229,7 +211,6 @@ function init() {
     $('#adminGistUrl').value = '';
     $('#adminOldPassword').value = '';
     $('#adminPassword').value = '';
-    $('#lowStockThreshold').value = '5';
   });
 
   $('#inventoryCheckAll')?.addEventListener('change', (event) => {
@@ -250,7 +231,7 @@ function init() {
       showToast('请先选择要删除的条目', { duration: 2400 });
       return;
     }
-    if (!confirm(`将删除 ${ids.length} 条库存记录，是否继续？`)) {
+    if (!confirm(`将删除 ${ids.length} 条元器件记录，是否继续？`)) {
       return;
     }
     const nextList = state.items.filter((item) => !ids.includes(item.id));
@@ -264,41 +245,6 @@ function init() {
     renderDetail();
     renderInventory();
     showToast('已批量删除');
-  });
-
-  $('#batchClearBtn')?.addEventListener('click', () => {
-    const ids = getSelectedInventoryIds();
-    if (!ids.length) {
-      showToast('请先选择要清空的条目', { duration: 2400 });
-      return;
-    }
-    if (!confirm(`将清零 ${ids.length} 条库存记录的数量，是否继续？`)) {
-      return;
-    }
-    const snapshots = new Map();
-    state.items.forEach((item) => {
-      if (ids.includes(item.id)) {
-        snapshots.set(item.id, { quantity: item.quantity, updatedAt: item.updatedAt });
-        item.quantity = 0;
-        item.updatedAt = nowIso();
-      }
-    });
-    if (!storageWrite(state.items)) {
-      snapshots.forEach((snap, id) => {
-        const item = state.items.find((it) => it.id === id);
-        if (item) {
-          item.quantity = snap.quantity;
-          item.updatedAt = snap.updatedAt;
-        }
-      });
-      showToast(STORAGE_WRITE_ERROR_MESSAGE, { isError: true });
-      return;
-    }
-    refreshFilters();
-    renderAdminList();
-    renderDetail();
-    renderInventory();
-    showToast('已批量清空');
   });
 
   $('#adminExportBtn')?.addEventListener('click', exportJson);

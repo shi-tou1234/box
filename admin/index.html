@@ -103,7 +103,7 @@
           <section class="toolbar">
             <div class="field">
               <label class="field__label" for="adminSearch">搜索</label>
-              <input class="input" id="adminSearch" placeholder="按名称/型号搜索" />
+              <input class="input" id="adminSearch" placeholder="按名称搜索" />
             </div>
             <div class="field">
               <label class="field__label" for="filterCategory">种类</label>
@@ -128,13 +128,12 @@
             <section class="panel">
               <div class="panel__header">
                 <div class="panel__title">元器件列表</div>
-                <div class="panel__actions">
-                  <button class="button button--primary button--small" id="adminNewBtn" type="button">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    新增元器件
-                  </button>
-                </div>
-              </div>
+            <div class="panel__actions">
+              <button class="button button--primary button--small" id="adminNewBtn" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                新增元器件
+              </button>
+            </div>
               <div class="list" id="adminComponentList"></div>
               <div class="empty hidden" id="adminListEmpty">
                 <div class="empty__title">暂无元器件</div>
@@ -146,10 +145,9 @@
               <div class="panel__header">
                 <div class="panel__title" id="detailTitle">选择一个元器件查看详情</div>
                 <div class="panel__actions" id="detailActions" hidden>
-                  <button class="button button--ghost button--small" id="editBtn" type="button">编辑</button>
-                  <button class="button button--ghost button--small" id="copyBtn" type="button">复制</button>
-                  <button class="button button--ghost button--small" id="quantityBtn" type="button">调整数量</button>
-                  <button class="button button--danger button--small" id="detailDeleteBtn" type="button">删除</button>
+                <button class="button button--ghost button--small" id="editBtn" type="button">编辑</button>
+                <button class="button button--ghost button--small" id="copyBtn" type="button">复制</button>
+                <button class="button button--danger button--small" id="detailDeleteBtn" type="button">删除</button>
                 </div>
               </div>
               <div class="detail" id="detail">
@@ -167,10 +165,9 @@
             <div class="panel__header">
               <div>
                 <div class="panel__title">库存管理</div>
-                <div class="field__hint mt-2">统一查看当前库存与低库存条目，支持批量清零或批量删除。</div>
+                <div class="field__hint mt-2">统一查看元器件条目，支持批量删除。</div>
               </div>
               <div class="panel__actions">
-                <button class="button button--ghost button--small" id="batchClearBtn" type="button">批量清零</button>
                 <button class="button button--danger button--small" id="batchDeleteBtn" type="button">批量删除</button>
               </div>
             </div>
@@ -181,11 +178,8 @@
                     <th><input type="checkbox" id="inventoryCheckAll" aria-label="全选" /></th>
                     <th>名称</th>
                     <th>种类</th>
-                    <th>型号</th>
                     <th>封装</th>
-                    <th>数量</th>
                     <th>位置/库位</th>
-                    <th>状态</th>
                   </tr>
                 </thead>
                 <tbody id="inventoryBody"></tbody>
@@ -193,7 +187,7 @@
             </div>
             <div class="empty hidden" id="inventoryEmpty">
               <div class="empty__title">暂无库存数据</div>
-              <div class="empty__desc">先新增元器件，再回来管理数量。</div>
+                <div class="empty__desc">开始录入第一条记录吧。</div>
             </div>
           </section>
         </section>
@@ -263,7 +257,7 @@
             <div class="panel__header">
               <div>
                 <div class="panel__title">系统设置</div>
-                <div class="field__hint mt-2">管理 GitHub Token、Gist 地址、管理密码和低库存阈值。</div>
+                <div class="field__hint mt-2">管理 GitHub Token、Gist 地址和管理密码。</div>
               </div>
             </div>
             <form class="form" id="adminSettingsForm" autocomplete="off">
@@ -286,11 +280,6 @@
                   <label class="field__label" for="adminPassword">新管理密码</label>
                   <input class="input" id="adminPassword" type="password" placeholder="留空则不修改" autocomplete="off" />
                   <div class="field__hint">密码使用 PBKDF2-SHA256 加密存储于本地。设置新密码需验证当前密码。</div>
-                </div>
-                <div class="field field--full">
-                  <label class="field__label" for="lowStockThreshold">低库存阈值</label>
-                  <input class="input" id="lowStockThreshold" type="number" inputmode="numeric" min="0" step="1" />
-                  <div class="field__hint">数量小于等于该值时，库存页会显示低库存提醒。</div>
                 </div>
                 <div class="field field--full">
                   <div class="field__label">当前已保存的 Gist</div>
@@ -331,17 +320,9 @@
             <div class="field__error" id="formCategoryError" hidden></div>
           </div>
           <div class="field">
-            <label class="field__label" for="formModel">型号</label>
-            <input class="input" id="formModel" />
-          </div>
-          <div class="field">
             <label class="field__label" for="formPackage">封装</label>
             <input class="input" id="formPackage" list="packageOptions" placeholder="0805、SOT-23..." />
             <datalist id="packageOptions"></datalist>
-          </div>
-          <div class="field">
-            <label class="field__label" for="formQuantity">数量</label>
-            <input class="input" id="formQuantity" type="number" inputmode="numeric" min="0" step="1" />
           </div>
           <div class="field">
             <label class="field__label" for="formLocation">位置/库位</label>
@@ -359,39 +340,6 @@
         <div class="dialog__footer">
           <button type="button" class="button button--ghost" id="cancelFormBtn">取消</button>
           <button type="submit" class="button button--primary">保存</button>
-        </div>
-      </form>
-    </div>
-  </dialog>
-
-  <dialog class="dialog" id="quantityDialog" aria-modal="true" aria-labelledby="quantityDialogTitle">
-    <div class="dialog__body">
-      <div class="dialog__header">
-        <div class="dialog__title" id="quantityDialogTitle">调整数量</div>
-        <button class="button button--ghost button--icon" id="closeQuantityBtn" aria-label="关闭" type="button">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-      </div>
-      <form class="form" id="quantityForm" autocomplete="off">
-        <input type="hidden" id="quantityId" />
-        <div class="form__grid">
-          <div class="field">
-            <label class="field__label" for="quantityMode">模式</label>
-            <select class="select" id="quantityMode">
-              <option value="increase">增加</option>
-              <option value="decrease">减少</option>
-              <option value="set">设为</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="field__label" for="quantityValue">数量 <span class="required">*</span></label>
-            <input class="input" id="quantityValue" type="number" inputmode="numeric" min="0" step="1" required />
-            <div class="field__error" id="quantityValueError" hidden></div>
-          </div>
-        </div>
-        <div class="dialog__footer">
-          <button type="button" class="button button--ghost" id="cancelQuantityBtn">取消</button>
-          <button type="submit" class="button button--primary">应用</button>
         </div>
       </form>
     </div>

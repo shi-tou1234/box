@@ -1,7 +1,5 @@
 import {
   storageRead,
-  settingsRead,
-  coerceQuantity,
   escapeHtml,
   safeUrl,
   resolveCategoryKey,
@@ -69,11 +67,6 @@ function getVisualKey(category) {
 
 function getVisual(category) {
   return CATEGORY_VISUAL[getVisualKey(category)];
-}
-
-function getThreshold() {
-  // settingsRead 内部已对阈值做兜底（非法值回退为 5）
-  return settingsRead().lowStockThreshold;
 }
 
 /* --------------------------------------------------------------------------
@@ -167,20 +160,11 @@ function getComponentSVG(visualKey, color) {
 /* --------------------------------------------------------------------------
    工具函数
 -------------------------------------------------------------------------- */
-function getStockTier(qty, threshold) {
-  const q = coerceQuantity(qty);
-  if (q <= 0) return { level: 'out', cls: 'stock-low', color: 'var(--danger)', label: '缺货' };
-  if (q <= threshold) return { level: 'low', cls: 'stock-low', color: 'var(--danger)', label: '不足' };
-  if (q <= threshold * 2) return { level: 'mid', cls: 'stock-mid', color: 'var(--warning)', label: '偏低' };
-  return { level: 'ok', cls: 'stock-ok', color: 'var(--success)', label: '充足' };
-}
-
 function getPrimaryText(item) {
-  return item.model || item.name || '未命名元器件';
+  return item.name || '未命名元器件';
 }
 
 function getSecondaryText(item) {
-  if (item.model) return item.name || '';
   if (item.notes) return item.notes;
   return [item.category, item.package].filter(Boolean).join(' · ');
 }
@@ -210,17 +194,12 @@ function getFilteredItems() {
       if (getVisualKey(item.category) !== state.filterCategory) return false;
     }
     if (text) {
-      const hay = [item.name, item.model, item.package, item.location, item.notes, item.category]
+      const hay = [item.name, item.package, item.location, item.notes, item.category]
         .filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(text)) return false;
     }
     return true;
   });
-}
-
-function getLowStockItems() {
-  const threshold = getThreshold();
-  return state.items.filter((item) => coerceQuantity(item.quantity) <= threshold);
 }
 
 function getRecentActivities(limit = 6) {
@@ -252,24 +231,12 @@ function getUsedCategories() {
 -------------------------------------------------------------------------- */
 function renderDashboard() {
   const totalTypes = state.items.length;
-  const totalStock = state.items.reduce((s, c) => s + coerceQuantity(c.quantity), 0);
-  const lowStock = getLowStockItems().length;
   const recentCount = getRecentActivities(8).length;
-  const threshold = getThreshold();
 
-  // 仅展示真实统计数据，不展示无法从当前快照推导的"趋势"
   const kpis = [
     {
       label: '元器件种类', value: totalTypes, icon: 'fa-cubes', color: 'var(--accent)',
       bg: 'var(--accent-soft)', sub: `${getUsedCategories().length} 个类别`,
-    },
-    {
-      label: '总库存数量', value: totalStock.toLocaleString(), icon: 'fa-layer-group', color: 'var(--cyan)',
-      bg: 'var(--cyan-soft)', sub: totalStock > 0 ? '当前库存合计' : '暂无库存记录',
-    },
-    {
-      label: '低库存预警', value: lowStock, icon: 'fa-triangle-exclamation', color: 'var(--danger)',
-      bg: 'var(--danger-soft)', sub: `阈值 ≤ ${threshold}`,
     },
     {
       label: '近期变动', value: recentCount, icon: 'fa-right-left', color: 'var(--success)',
@@ -281,22 +248,14 @@ function renderDashboard() {
     <section class="hero fade-up">
       <div class="hero__content">
         <div class="hero__left">
-          <div class="hero__tag"><span class="pulse"></span>实时库存监控</div>
+          <div class="hero__tag"><span class="pulse"></span>元器件目录</div>
           <h1>焊接元器件 <span class="accent">智能管理</span></h1>
-          <p>统一元器件库存管理平台，覆盖入库、出库、预警、统计全流程，让每一次焊接都心中有数。</p>
+          <p>统一元器件管理平台，让每一次焊接都心中有数。</p>
         </div>
         <div class="hero__stats">
           <div class="hero__stat">
             <div class="hero__stat__num accent">${totalTypes}</div>
             <div class="hero__stat__lbl">元器件种类</div>
-          </div>
-          <div class="hero__stat">
-            <div class="hero__stat__num">${totalStock.toLocaleString()}</div>
-            <div class="hero__stat__lbl">总库存数</div>
-          </div>
-          <div class="hero__stat">
-            <div class="hero__stat__num cyan">${lowStock}</div>
-            <div class="hero__stat__lbl">低库存预警</div>
           </div>
         </div>
       </div>
@@ -317,38 +276,7 @@ function renderDashboard() {
       `).join('')}
     </section>
 
-    <section class="charts-grid">
-      <div class="hub-panel fade-up">
-        <div class="hub-panel__header">
-          <div class="hub-panel__title">分类库存分布 <span class="sub">按元器件类别</span></div>
-          <div style="display:flex;gap:6px;">
-            <button class="chip is-active" data-metric="stock">数量</button>
-            <button class="chip" data-metric="count">种类</button>
-          </div>
-        </div>
-        <div class="cat-bars" id="catBars"></div>
-      </div>
-
-      <div class="hub-panel fade-up">
-        <div class="hub-panel__header">
-          <div class="hub-panel__title">封装类型占比</div>
-        </div>
-        <div class="donut-container">
-          <div class="donut" id="donut"></div>
-          <div class="donut-legend" id="donutLegend"></div>
-        </div>
-      </div>
-    </section>
-
     <section class="bottom-grid">
-      <div class="hub-panel fade-up">
-        <div class="hub-panel__header">
-          <div class="hub-panel__title">低库存预警 <span class="sub">需补货</span></div>
-          <button class="btn btn-ghost btn--small" data-page="alert">查看全部</button>
-        </div>
-        ${renderLowStockTable()}
-      </div>
-
       <div class="hub-panel fade-up">
         <div class="hub-panel__header">
           <div class="hub-panel__title">最近活动</div>
@@ -356,42 +284,6 @@ function renderDashboard() {
         ${renderActivityList()}
       </div>
     </section>
-  `;
-}
-
-function renderLowStockTable() {
-  const threshold = getThreshold();
-  const items = getLowStockItems()
-    .sort((a, b) => coerceQuantity(a.quantity) - coerceQuantity(b.quantity))
-    .slice(0, 6);
-
-  if (!items.length) {
-    return `<div class="hub-empty"><i class="fa-solid fa-circle-check"></i>暂无低库存条目，库存充足</div>`;
-  }
-
-  return `
-    <div class="hub-table-wrap">
-      <table class="hub-table">
-        <thead>
-          <tr><th>型号</th><th>类别</th><th>封装</th><th>当前库存</th><th>阈值</th><th>位置</th></tr>
-        </thead>
-        <tbody>
-          ${items.map((item) => {
-            const vis = getVisual(item.category);
-            return `
-              <tr style="cursor: pointer;" tabindex="0" aria-label="查看详情" data-detail-id="${escapeHtml(item.id)}">
-                <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
-                <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
-                <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
-                <td class="mono stock-low" style="font-weight: 700;">${coerceQuantity(item.quantity)}</td>
-                <td class="mono" style="color: var(--text-muted);">${threshold}</td>
-                <td class="mono" style="color: var(--text-muted);">${escapeHtml(item.location || '-')}</td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
   `;
 }
 
@@ -408,8 +300,8 @@ function renderActivityList() {
         const color = isCreate ? 'var(--success)' : 'var(--cyan)';
         const bg = isCreate ? 'var(--success-soft)' : 'var(--cyan-soft)';
         const text = isCreate
-          ? `新增 <span class="mono">${escapeHtml(getPrimaryText(item))}</span> ×${coerceQuantity(item.quantity)}`
-          : `更新 <span class="mono">${escapeHtml(getPrimaryText(item))}</span> ×${coerceQuantity(item.quantity)}`;
+          ? `新增 <span class="mono">${escapeHtml(getPrimaryText(item))}</span>`
+          : `更新 <span class="mono">${escapeHtml(getPrimaryText(item))}</span>`;
         return `
           <div class="activity-item">
             <div class="activity-icon" style="background: ${bg}; color: ${color};">
@@ -432,18 +324,13 @@ function renderActivityList() {
 /* --------------------------------------------------------------------------
    元器件库
 -------------------------------------------------------------------------- */
-function renderInventory() {
-  const total = state.items.length;
-  const cats = getUsedCategories();
-
-  return `
     <div class="fade-up" style="margin-bottom: var(--space-5);">
       <div class="hero" style="padding: 22px 28px;">
         <div class="hero__content">
           <div class="hero__left">
             <div class="hero__tag"><span class="pulse"></span>共 ${total} 种元器件</div>
             <h1 style="font-size: 24px;">元器件 <span class="accent">库存目录</span></h1>
-            <p>浏览所有焊接元器件的型号、封装、库存与位置信息。点击任一条目可查看详细参数。</p>
+            <p>浏览所有焊接元器件的封装、位置与备注信息。点击任一条目可查看详细参数。</p>
           </div>
         </div>
       </div>
@@ -462,7 +349,7 @@ function renderInventory() {
       <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
         <div class="hub-search" style="width: 240px; margin: 0; position: relative;">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" placeholder="搜索型号..." id="invSearch" style="padding: 6px 12px 6px 32px; font-size: 12px;" />
+          <input type="text" placeholder="搜索名称、位置..." id="invSearch" style="padding: 6px 12px 6px 32px; font-size: 12px;" />
         </div>
         <div class="view-toggle">
           <button class="${state.viewMode === 'grid' ? 'is-active' : ''}" data-view="grid" title="网格视图" type="button"><i class="fa-solid fa-grip"></i></button>
@@ -479,7 +366,6 @@ function renderInventoryView() {
   const view = $('#inventoryView');
   if (!view) return;
 
-  const threshold = getThreshold();
   const filtered = getFilteredItems();
 
   if (!filtered.length) {
@@ -492,9 +378,6 @@ function renderInventoryView() {
       <div class="component-grid">
         ${filtered.map((item) => {
           const vis = getVisual(item.category);
-          const qty = coerceQuantity(item.quantity);
-          const tier = getStockTier(qty, threshold);
-          const ratio = Math.min(1, qty / Math.max(1, threshold * 3));
           return `
             <button type="button" class="component-card" data-detail-id="${escapeHtml(item.id)}" style="text-align: left;">
               <div class="card-header">
@@ -509,16 +392,7 @@ function renderInventoryView() {
                 <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.location || '-')}</span>
                 ${item.datasheet ? `<span><i class="fa-solid fa-file-lines"></i> 手册</span>` : ''}
               </div>
-              <div class="card-body">
-                <div>
-                  <div class="card-stock ${tier.cls}" style="color: ${tier.color};">${qty.toLocaleString()}</div>
-                  <div class="card-stock-label">库存 / 阈值 ${threshold}</div>
-                </div>
-                <div class="card-visual">${getComponentSVG(vis.key, vis.color)}</div>
-              </div>
-              <div class="stock-progress" style="margin-top: 10px;">
-                <div class="stock-progress__fill" style="width: ${ratio * 100}%; background: ${tier.color};"></div>
-              </div>
+              <div class="card-visual">${getComponentSVG(vis.key, vis.color)}</div>
             </button>
           `;
         }).join('')}
@@ -531,25 +405,19 @@ function renderInventoryView() {
           <table class="hub-table">
             <thead>
               <tr>
-                <th>型号</th><th>类别</th><th>封装</th><th>规格</th>
-                <th>库存</th><th>阈值</th><th>位置</th><th>状态</th>
+                <th>名称</th><th>类别</th><th>封装</th><th>规格</th><th>位置</th>
               </tr>
             </thead>
             <tbody>
               ${filtered.map((item) => {
                 const vis = getVisual(item.category);
-                const qty = coerceQuantity(item.quantity);
-                const tier = getStockTier(qty, threshold);
                 return `
                   <tr style="cursor: pointer;" tabindex="0" aria-label="查看详情" data-detail-id="${escapeHtml(item.id)}">
                     <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
                     <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
                     <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
                     <td style="color: var(--text-secondary); max-width: 220px;" class="truncate">${escapeHtml(getSecondaryText(item))}</td>
-                    <td class="mono ${tier.cls}" style="font-weight: 700; font-size: 14px;">${qty.toLocaleString()}</td>
-                    <td class="mono" style="color: var(--text-muted);">${threshold}</td>
                     <td class="mono" style="color: var(--text-muted);">${escapeHtml(item.location || '-')}</td>
-                    <td><span style="color: ${tier.color}; font-size: 12px; font-weight: 600;">● ${tier.label}</span></td>
                   </tr>
                 `;
               }).join('')}
@@ -564,60 +432,9 @@ function renderInventoryView() {
 /* --------------------------------------------------------------------------
    低库存预警页 / 数据统计页
 -------------------------------------------------------------------------- */
-function renderAlertPage() {
-  const threshold = getThreshold();
-  const items = getLowStockItems().sort((a, b) => coerceQuantity(a.quantity) - coerceQuantity(b.quantity));
-
-  return `
-    <section class="hero fade-up" style="padding: 22px 28px;">
-      <div class="hero__content">
-        <div class="hero__left">
-          <div class="hero__tag"><span class="pulse"></span>阈值 ≤ ${threshold}</div>
-          <h1 style="font-size: 24px;">低库存 <span class="accent">预警列表</span></h1>
-          <p>共 ${items.length} 条元器件库存低于阈值，建议尽快补货。点击条目查看详细参数。</p>
-        </div>
-      </div>
-    </section>
-
-    <div class="hub-panel fade-up" style="padding: 0;">
-      ${items.length === 0
-        ? `<div class="hub-empty"><i class="fa-solid fa-circle-check"></i>暂无低库存条目，库存充足</div>`
-        : `<div class="hub-table-wrap" style="margin: 0;">
-            <table class="hub-table">
-              <thead>
-                <tr><th>型号</th><th>类别</th><th>封装</th><th>规格</th><th>当前库存</th><th>阈值</th><th>位置</th><th>状态</th></tr>
-              </thead>
-              <tbody>
-                ${items.map((item) => {
-                  const vis = getVisual(item.category);
-                  const qty = coerceQuantity(item.quantity);
-                  const tier = getStockTier(qty, threshold);
-                  return `
-                    <tr style="cursor: pointer;" tabindex="0" aria-label="查看详情" data-detail-id="${escapeHtml(item.id)}">
-                      <td class="mono" style="color: var(--accent); font-weight: 600;">${escapeHtml(getPrimaryText(item))}</td>
-                      <td><span class="tag ${vis.tag}">${escapeHtml(vis.name)}</span></td>
-                      <td class="mono" style="color: var(--text-secondary);">${escapeHtml(item.package || '-')}</td>
-                      <td style="color: var(--text-secondary);" class="truncate">${escapeHtml(getSecondaryText(item))}</td>
-                      <td class="mono ${tier.cls}" style="font-weight: 700;">${qty.toLocaleString()}</td>
-                      <td class="mono" style="color: var(--text-muted);">${threshold}</td>
-                      <td class="mono" style="color: var(--text-muted);">${escapeHtml(item.location || '-')}</td>
-                      <td><span style="color: ${tier.color}; font-size: 12px; font-weight: 600;">● ${tier.label}</span></td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>`}
-    </div>
-  `;
-}
-
 function renderStatsPage() {
   const cats = getUsedCategories();
   const total = state.items.length;
-  const totalStock = state.items.reduce((s, c) => s + coerceQuantity(c.quantity), 0);
-  const threshold = getThreshold();
-  const lowCount = getLowStockItems().length;
 
   return `
     <section class="hero fade-up" style="padding: 22px 28px;">
@@ -625,7 +442,7 @@ function renderStatsPage() {
         <div class="hero__left">
           <div class="hero__tag"><span class="pulse"></span>数据统计</div>
           <h1 style="font-size: 24px;">元器件 <span class="accent">统计分析</span></h1>
-          <p>按类别与封装维度查看库存分布，辅助补货与盘点决策。</p>
+          <p>按类别与封装维度查看分布，辅助盘点决策。</p>
         </div>
       </div>
     </section>
@@ -637,16 +454,6 @@ function renderStatsPage() {
         <div class="kpi-value" style="color: var(--accent);">${total}</div>
       </div>
       <div class="kpi-card fade-up">
-        <div class="kpi-card__top"><div class="kpi-icon" style="background: var(--cyan-soft); color: var(--cyan);"><i class="fa-solid fa-layer-group"></i></div></div>
-        <div class="kpi-label">总库存数量</div>
-        <div class="kpi-value" style="color: var(--cyan);">${totalStock.toLocaleString()}</div>
-      </div>
-      <div class="kpi-card fade-up">
-        <div class="kpi-card__top"><div class="kpi-icon" style="background: var(--danger-soft); color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i></div></div>
-        <div class="kpi-label">低库存条目</div>
-        <div class="kpi-value" style="color: var(--danger);">${lowCount}</div>
-      </div>
-      <div class="kpi-card fade-up">
         <div class="kpi-card__top"><div class="kpi-icon" style="background: var(--success-soft); color: var(--success);"><i class="fa-solid fa-shapes"></i></div></div>
         <div class="kpi-label">活跃类别数</div>
         <div class="kpi-value" style="color: var(--success);">${cats.length}</div>
@@ -655,7 +462,7 @@ function renderStatsPage() {
 
     <section class="charts-grid">
       <div class="hub-panel fade-up">
-        <div class="hub-panel__header"><div class="hub-panel__title">分类库存分布 <span class="sub">数量</span></div></div>
+        <div class="hub-panel__header"><div class="hub-panel__title">分类分布 <span class="sub">按元器件类别</span></div></div>
         <div class="cat-bars" id="catBars"></div>
       </div>
       <div class="hub-panel fade-up">
@@ -672,29 +479,26 @@ function renderStatsPage() {
 /* --------------------------------------------------------------------------
    图表渲染
 -------------------------------------------------------------------------- */
-let catMetric = 'stock';
-
 function renderCatBars() {
   const el = $('#catBars');
   if (!el) return;
 
   const data = getUsedCategories().map((c) => {
     const items = state.items.filter((it) => getVisualKey(it.category) === c.key);
-    const stock = items.reduce((s, it) => s + coerceQuantity(it.quantity), 0);
-    return { ...c, stock, count: items.length };
-  }).filter((d) => d.count > 0).sort((a, b) => (catMetric === 'stock' ? b.stock - a.stock : b.count - a.count));
+    return { ...c, count: items.length };
+  }).filter((d) => d.count > 0).sort((a, b) => b.count - a.count);
 
   if (!data.length) {
     el.innerHTML = `<div class="hub-empty" style="padding: 30px;"><i class="fa-solid fa-chart-column"></i>暂无数据</div>`;
     return;
   }
 
-  const values = data.map((d) => (catMetric === 'stock' ? d.stock : d.count));
+  const values = data.map((d) => d.count);
   const max = Math.max(...values, 1);
   const total = values.reduce((s, v) => s + v, 0) || 1;
 
   el.innerHTML = data.map((d) => {
-    const val = catMetric === 'stock' ? d.stock : d.count;
+    const val = d.count;
     return `
       <div class="cat-bar">
         <div class="cat-name">
@@ -801,17 +605,6 @@ function renderUsage() {
   if (barEl) barEl.style.width = `${pct}%`;
   if (usedEl) usedEl.textContent = `数据 ${formatSize(bytes)}`;
   if (totalEl) totalEl.textContent = '配额约 5 MB';
-
-  const badge = $('#alertBadge');
-  const lowCount = getLowStockItems().length;
-  if (badge) {
-    if (lowCount > 0) {
-      badge.textContent = String(lowCount);
-      badge.hidden = false;
-    } else {
-      badge.hidden = true;
-    }
-  }
 }
 
 /* --------------------------------------------------------------------------
@@ -820,7 +613,6 @@ function renderUsage() {
 const PAGE_TITLES = {
   dashboard: ['仪表盘', '/ 总览'],
   inventory: ['元器件库', '/ 库存目录'],
-  alert: ['低库存预警', '/ 待处理'],
   stats: ['数据统计', '/ 分析'],
 };
 
@@ -832,7 +624,6 @@ function switchPage(page) {
   let html = '';
   if (page === 'dashboard') html = renderDashboard();
   else if (page === 'inventory') html = renderInventory();
-  else if (page === 'alert') html = renderAlertPage();
   else if (page === 'stats') html = renderStatsPage();
   else html = renderPlaceholder(t);
 
@@ -842,7 +633,6 @@ function switchPage(page) {
   if (page === 'dashboard' || page === 'stats') {
     renderCatBars();
     renderDonut();
-    bindChartToggles();
   }
   if (page === 'inventory') {
     renderInventoryView();
@@ -864,9 +654,6 @@ function findItemById(id) {
 
 function renderDetailDialog(item) {
   const vis = getVisual(item.category);
-  const qty = coerceQuantity(item.quantity);
-  const threshold = getThreshold();
-  const tier = getStockTier(qty, threshold);
   const primary = getPrimaryText(item);
   const secondary = getSecondaryText(item);
   const created = item.createdAt ? timeAgo(item.createdAt) : '—';
@@ -874,13 +661,9 @@ function renderDetailDialog(item) {
 
   const specs = [
     { label: '名称', value: item.name, icon: 'fa-tag' },
-    { label: '型号', value: item.model, icon: 'fa-microchip' },
     { label: '类别', value: vis.name, icon: 'fa-shapes' },
     { label: '封装', value: item.package, icon: 'fa-cube' },
     { label: '位置/库位', value: item.location, icon: 'fa-location-dot' },
-    { label: '库存数量', value: qty.toLocaleString(), icon: 'fa-boxes-stacked' },
-    { label: '低库存阈值', value: String(threshold), icon: 'fa-triangle-exclamation' },
-    { label: '库存状态', value: tier.label, icon: 'fa-gauge' },
   ].filter((s) => s.value !== undefined && s.value !== null && String(s.value).trim() !== '');
 
   const specsHtml = specs.map((s) => `
@@ -921,14 +704,6 @@ function renderDetailDialog(item) {
       <button type="button" class="icon-btn detail-dialog__close" id="detailCloseBtn" aria-label="关闭" title="关闭">
         <i class="fa-solid fa-xmark"></i>
       </button>
-    </div>
-
-    <div class="detail-dialog__status">
-      <div class="detail-status-pill" style="background: color-mix(in srgb, ${tier.color} 14%, transparent); color: ${tier.color};">
-        <span class="status-dot" style="background: ${tier.color}; box-shadow: 0 0 0 3px color-mix(in srgb, ${tier.color} 18%, transparent);"></span>
-        <span class="mono" style="font-weight: 700;">${qty.toLocaleString()}</span>
-        <span style="opacity: 0.85;">/ 阈值 ${threshold} · ${tier.label}</span>
-      </div>
     </div>
 
     <div class="detail-section">
@@ -984,17 +759,6 @@ function renderPlaceholder(title) {
       <p>该模块正在建设中，敬请期待。</p>
     </div>
   `;
-}
-
-function bindChartToggles() {
-  $$('.hub-panel__header .chip[data-metric]').forEach((chip) => {
-    chip.addEventListener('click', () => {
-      $$('.hub-panel__header .chip[data-metric]').forEach((c) => c.classList.remove('is-active'));
-      chip.classList.add('is-active');
-      catMetric = chip.dataset.metric;
-      renderCatBars();
-    });
-  });
 }
 
 function bindInventoryControls() {
