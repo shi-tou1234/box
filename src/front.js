@@ -77,82 +77,80 @@ function getComponentSVG(visualKey, color) {
   switch (visualKey) {
     case 'resistor':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <line x1="2" y1="30" x2="14" y2="30" stroke="${c}" stroke-width="1.5"/>
-        <line x1="46" y1="30" x2="58" y2="30" stroke="${c}" stroke-width="1.5"/>
-        <rect x="14" y="24" width="32" height="12" fill="${c}" fill-opacity="0.15" stroke="${c}" stroke-width="1.5" rx="1"/>
-        <rect x="20" y="22" width="4" height="16" fill="${c}" fill-opacity="0.6"/>
-        <rect x="26" y="22" width="4" height="16" fill="${c}" fill-opacity="0.4"/>
-        <rect x="32" y="22" width="4" height="16" fill="${c}" fill-opacity="0.6"/>
-        <rect x="38" y="22" width="4" height="16" fill="${c}" fill-opacity="0.4"/>
+        <line x1="2" y1="30" x2="12" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="48" y1="30" x2="58" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M12 30 L16 22 L22 38 L28 22 L34 38 L40 22 L44 38 L48 30" stroke="${c}" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
       </svg>`;
     case 'capacitor':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <line x1="2" y1="30" x2="22" y2="30" stroke="${c}" stroke-width="1.5"/>
-        <line x1="38" y1="30" x2="58" y2="30" stroke="${c}" stroke-width="1.5"/>
-        <line x1="22" y1="14" x2="22" y2="46" stroke="${c}" stroke-width="2.5"/>
-        <line x1="38" y1="14" x2="38" y2="46" stroke="${c}" stroke-width="2.5"/>
-        <text x="30" y="11" text-anchor="middle" fill="${c}" font-size="9" font-family="JetBrains Mono" font-weight="600">µF</text>
+        <line x1="2" y1="30" x2="24" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="36" y1="30" x2="58" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="24" y1="12" x2="24" y2="48" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M36 12 Q30 22 36 30 Q30 38 36 48" stroke="${c}" stroke-width="2.5" stroke-linecap="round" fill="none"/>
       </svg>`;
     case 'ic':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <rect x="14" y="14" width="32" height="32" fill="${c}" fill-opacity="0.15" stroke="${c}" stroke-width="1.5" rx="2"/>
-        <circle cx="19" cy="19" r="1.8" fill="${c}"/>
-        <text x="30" y="34" text-anchor="middle" fill="${c}" font-size="8" font-family="JetBrains Mono" font-weight="700">IC</text>
-        ${[0,1,2,3].map((i) => `<line x1="6" y1="${20 + i * 8}" x2="14" y2="${20 + i * 8}" stroke="${c}" stroke-width="1.5"/>`).join('')}
-        ${[0,1,2,3].map((i) => `<line x1="46" y1="${20 + i * 8}" x2="54" y2="${20 + i * 8}" stroke="${c}" stroke-width="1.5"/>`).join('')}
+        <rect x="16" y="12" width="28" height="36" rx="2" fill="${c}" fill-opacity="0.1" stroke="${c}" stroke-width="1.5"/>
+        <path d="M22 12 A5 5 0 0 0 22 12" stroke="${c}" stroke-width="0" fill="none"/>
+        <circle cx="20" cy="17" r="2" fill="${c}" fill-opacity="0.6"/>
+        ${[0,1,2,3,4].map((i) => `<line x1="8" y1="${18 + i * 7}" x2="16" y2="${18 + i * 7}" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>`).join('')}
+        ${[0,1,2,3,4].map((i) => `<line x1="44" y1="${18 + i * 7}" x2="52" y2="${18 + i * 7}" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>`).join('')}
       </svg>`;
     case 'diode':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <line x1="2" y1="30" x2="18" y2="30" stroke="${c}" stroke-width="1.5"/>
-        <line x1="42" y1="30" x2="58" y2="30" stroke="${c}" stroke-width="1.5"/>
-        <polygon points="18,18 18,42 38,30" fill="${c}" fill-opacity="0.3" stroke="${c}" stroke-width="1.5"/>
-        <line x1="38" y1="18" x2="38" y2="42" stroke="${c}" stroke-width="2.5"/>
+        <line x1="2" y1="30" x2="18" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="42" y1="30" x2="58" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <polygon points="18,16 18,44 40,30" fill="${c}" fill-opacity="0.2" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/>
+        <line x1="40" y1="16" x2="40" y2="44" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>
       </svg>`;
     case 'transistor':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <circle cx="30" cy="30" r="18" fill="${c}" fill-opacity="0.12" stroke="${c}" stroke-width="1.5"/>
-        <line x1="22" y1="20" x2="22" y2="40" stroke="${c}" stroke-width="2.5"/>
-        <line x1="22" y1="24" x2="8" y2="18" stroke="${c}" stroke-width="1.5"/>
-        <line x1="22" y1="32" x2="46" y2="32" stroke="${c}" stroke-width="1.5"/>
-        <line x1="22" y1="36" x2="8" y2="42" stroke="${c}" stroke-width="1.5"/>
-        <polygon points="42,28 42,36 48,32" fill="${c}"/>
+        <circle cx="30" cy="30" r="18" fill="${c}" fill-opacity="0.08" stroke="${c}" stroke-width="1.5"/>
+        <line x1="20" y1="20" x2="20" y2="40" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="20" y1="25" x2="6" y2="18" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="20" y1="35" x2="6" y2="42" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="20" y1="30" x2="48" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <polygon points="44,27 44,33 50,30" fill="${c}"/>
       </svg>`;
     case 'crystal':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <rect x="14" y="22" width="32" height="16" fill="${c}" fill-opacity="0.15" stroke="${c}" stroke-width="1.5" rx="1"/>
-        <line x1="22" y1="22" x2="22" y2="38" stroke="${c}" stroke-width="2"/>
-        <line x1="38" y1="22" x2="38" y2="38" stroke="${c}" stroke-width="2"/>
-        <line x1="2" y1="30" x2="14" y2="30" stroke="${c}" stroke-width="1.5"/>
-        <line x1="46" y1="30" x2="58" y2="30" stroke="${c}" stroke-width="1.5"/>
-        <text x="30" y="33" text-anchor="middle" fill="${c}" font-size="7" font-family="JetBrains Mono" font-weight="600">XTAL</text>
+        <line x1="2" y1="30" x2="14" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="46" y1="30" x2="58" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="16" y1="14" x2="16" y2="46" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+        <line x1="44" y1="14" x2="44" y2="46" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+        <rect x="18" y="20" width="24" height="20" rx="2" fill="${c}" fill-opacity="0.1" stroke="${c}" stroke-width="1.2"/>
       </svg>`;
     case 'inductor':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <line x1="2" y1="35" x2="10" y2="35" stroke="${c}" stroke-width="1.5"/>
-        <line x1="50" y1="35" x2="58" y2="35" stroke="${c}" stroke-width="1.5"/>
-        <path d="M 10 35 Q 15 22 20 35 Q 25 22 30 35 Q 35 22 40 35 Q 45 22 50 35" stroke="${c}" stroke-width="1.8" fill="none"/>
+        <line x1="2" y1="34" x2="10" y2="34" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="50" y1="34" x2="58" y2="34" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M10 34 C10 24 18 24 18 34 C18 24 26 24 26 34 C26 24 34 24 34 34 C34 24 42 24 42 34 C42 24 50 24 50 34" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
       </svg>`;
     case 'connector':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <rect x="8" y="18" width="44" height="22" fill="${c}" fill-opacity="0.15" stroke="${c}" stroke-width="1.5" rx="2"/>
-        <rect x="12" y="22" width="36" height="4" fill="${c}" fill-opacity="0.5"/>
-        <line x1="16" y1="40" x2="16" y2="50" stroke="${c}" stroke-width="1.5"/>
-        <line x1="26" y1="40" x2="26" y2="50" stroke="${c}" stroke-width="1.5"/>
-        <line x1="36" y1="40" x2="36" y2="50" stroke="${c}" stroke-width="1.5"/>
-        <line x1="46" y1="40" x2="46" y2="50" stroke="${c}" stroke-width="1.5"/>
+        <rect x="6" y="16" width="48" height="28" rx="3" fill="${c}" fill-opacity="0.08" stroke="${c}" stroke-width="1.5"/>
+        <rect x="10" y="20" width="8" height="20" rx="1.5" fill="${c}" fill-opacity="0.25" stroke="${c}" stroke-width="1"/>
+        <rect x="20" y="20" width="8" height="20" rx="1.5" fill="${c}" fill-opacity="0.25" stroke="${c}" stroke-width="1"/>
+        <rect x="30" y="20" width="8" height="20" rx="1.5" fill="${c}" fill-opacity="0.25" stroke="${c}" stroke-width="1"/>
+        <rect x="40" y="20" width="8" height="20" rx="1.5" fill="${c}" fill-opacity="0.25" stroke="${c}" stroke-width="1"/>
       </svg>`;
     case 'led':
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <circle cx="30" cy="26" r="14" fill="${c}" fill-opacity="0.18" stroke="${c}" stroke-width="1.5"/>
-        <line x1="22" y1="40" x2="22" y2="50" stroke="${c}" stroke-width="1.5"/>
-        <line x1="38" y1="40" x2="38" y2="50" stroke="${c}" stroke-width="1.5"/>
-        <line x1="20" y1="14" x2="14" y2="8" stroke="${c}" stroke-width="1.2"/>
-        <line x1="30" y1="10" x2="30" y2="4" stroke="${c}" stroke-width="1.2"/>
-        <line x1="40" y1="14" x2="46" y2="8" stroke="${c}" stroke-width="1.2"/>
+        <polygon points="18,16 18,44 38,30" fill="${c}" fill-opacity="0.15" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/>
+        <line x1="38" y1="16" x2="38" y2="44" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="38" y1="30" x2="52" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="10" y1="30" x2="18" y2="30" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="26" y1="12" x2="22" y2="6" stroke="${c}" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="32" y1="12" x2="32" y2="5" stroke="${c}" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="36" y1="12" x2="40" y2="6" stroke="${c}" stroke-width="1.2" stroke-linecap="round"/>
+        <polygon points="20,4 22,6 19,7" fill="${c}"/>
+        <polygon points="30,3 32,5 29,6" fill="${c}"/>
+        <polygon points="38,4 40,6 37,7" fill="${c}"/>
       </svg>`;
     default:
       return `<svg viewBox="0 0 60 60" fill="none" style="width:100%;height:100%">
-        <circle cx="30" cy="30" r="15" stroke="${c}" stroke-width="1.5" fill="${c}" fill-opacity="0.18"/>
+        <circle cx="30" cy="30" r="14" stroke="${c}" stroke-width="1.5" fill="${c}" fill-opacity="0.12"/>
+        <circle cx="30" cy="30" r="4" fill="${c}" fill-opacity="0.3"/>
       </svg>`;
   }
 }
