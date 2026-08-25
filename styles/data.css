@@ -151,6 +151,8 @@
   font-family: inherit;
   font-size: inherit;
   cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
   transition: background var(--transition-fast),
               border-color var(--transition-fast),
               box-shadow var(--transition-fast),
@@ -206,7 +208,8 @@
   display: flex;
   gap: var(--space-1);
   align-items: center;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .badge {

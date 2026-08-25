@@ -124,6 +124,7 @@
   padding: var(--space-3) var(--space-4);
   border-bottom: var(--panel-border);
   background: color-mix(in srgb, var(--surface-elevated) 55%, var(--surface-panel));
+  flex-wrap: wrap;
 }
 
 .panel__title {
