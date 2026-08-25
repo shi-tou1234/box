@@ -4,7 +4,6 @@ import {
   $$,
   showToast,
   getFilteredItems,
-  getUniqueValues,
   formatLastSync,
   readSettingsLastSync,
   refreshFilters,
@@ -224,7 +223,6 @@ export function upsertItem(payload) {
   const next = {
     ...payload,
     id: payload.id || generateId(),
-    quantity: coerceQuantity(payload.quantity),
     createdAt: existing ? existing.createdAt : nowIso(),
     updatedAt: nowIso(),
   };
