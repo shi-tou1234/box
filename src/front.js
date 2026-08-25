@@ -35,16 +35,16 @@ function debounce(fn, wait = 150) {
    类别视觉映射（中文规范类别 → 视觉 key + 颜色 + 标签类）
 -------------------------------------------------------------------------- */
 const CATEGORY_VISUAL = {
-  resistor:   { name: '电阻',          color: '#ffa726', tag: 'tag-resistor' },
-  capacitor:  { name: '电容',          color: '#4dd0c1', tag: 'tag-capacitor' },
-  ic:         { name: '集成电路',      color: '#e879f9', tag: 'tag-ic' },
-  diode:      { name: '二极管',        color: '#66bb6a', tag: 'tag-diode' },
-  transistor: { name: '三极管',        color: '#ffb300', tag: 'tag-transistor' },
-  connector:  { name: '接插件',        color: '#80deea', tag: 'tag-connector' },
-  crystal:    { name: '晶振',          color: '#f48fb1', tag: 'tag-crystal' },
-  inductor:   { name: '电感',          color: '#ff8a65', tag: 'tag-inductor' },
-  led:        { name: 'LED',           color: '#fbbf24', tag: 'tag-led' },
-  default:    { name: '其他',          color: '#8b94a6', tag: 'tag-default' },
+  resistor:   { key: 'resistor',   name: '电阻',          color: '#ffa726', tag: 'tag-resistor' },
+  capacitor:  { key: 'capacitor',  name: '电容',          color: '#4dd0c1', tag: 'tag-capacitor' },
+  ic:         { key: 'ic',         name: '集成电路',      color: '#e879f9', tag: 'tag-ic' },
+  diode:      { key: 'diode',      name: '二极管',        color: '#66bb6a', tag: 'tag-diode' },
+  transistor: { key: 'transistor', name: '三极管',        color: '#ffb300', tag: 'tag-transistor' },
+  connector:  { key: 'connector',  name: '接插件',        color: '#80deea', tag: 'tag-connector' },
+  crystal:    { key: 'crystal',    name: '晶振',          color: '#f48fb1', tag: 'tag-crystal' },
+  inductor:   { key: 'inductor',   name: '电感',          color: '#ff8a65', tag: 'tag-inductor' },
+  led:        { key: 'led',        name: 'LED',           color: '#fbbf24', tag: 'tag-led' },
+  default:    { key: 'default',    name: '其他',          color: '#8b94a6', tag: 'tag-default' },
 };
 
 const CATEGORY_KEY_TO_VISUAL = {
